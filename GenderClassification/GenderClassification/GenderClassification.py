@@ -17,3 +17,9 @@ df = pd.read_excel('data/blog-gender-dataset.xlsx', header=None, names=names, us
 print(df.columns)
 print(df['Classification'][0])
 print(df['Text'][0])
+
+# Remember to check nan with: if df['Text'][i] != df['Text'][i]:
+
+#for i in range(len(df['Text'])):
+#    if df['Text'][i] != df['Text'][i]:
+#        df.drop([i])
