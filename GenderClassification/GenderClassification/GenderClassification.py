@@ -3,8 +3,9 @@ import pandas as pd
 import numpy as np
 import random
 from sklearn.feature_extraction.text import CountVectorizer
-#from sklearn.feature_extraction.text import TfidfVectorizer
-#from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import HashingVectorizer
+from sklearn.feature_extraction import FeatureHasher
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.pipeline import Pipeline
@@ -12,13 +13,19 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 def main():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--classifier', default='nb', help='nb | svm | dt')
-    parser.add_argument('-v', '--vectorizer')
+    parser.add_argument('-v', '--vectorizer', default='count', help='count | tfidf | hash')
     opts = parser.parse_args()
     ###############################################
+
+    print("Vectorizer: %s" % (opts.vectorizer))
+    print("Classifier: %s" % (opts.classifier))
 
     ## Build the Training Set and Testing Set #####
     names = ['Text', 'Classification']
@@ -55,23 +62,40 @@ def main():
     ###############################################
 
     ## Build and Train Model ######################
-    vectorizer = CountVectorizer()
+    if opts.vectorizer == 'count':
+        vectorizer = CountVectorizer()
+    elif opts.vectorizer == 'tfidf':
+        vectorizer = TfidfVectorizer()
+    elif opts.vectorizer == 'hash':
+        vectorizer = HashingVectorizer(non_negative=True) # This seems like it isn't good
+    else:
+        print('Unknown Vectorizer: %s' % (opts.vectorizer))
+
     if opts.classifier == 'nb':
         classifier = MultinomialNB()
     elif opts.classifier == 'svm':
         classifier = LinearSVC()
     elif opts.classifier == 'dt':
         classifier = DecisionTreeClassifier()
+    else:
+        print('Unknown Classifier: %s' % (opts.classifier))
+        return
 
     text_clf = Pipeline([
             ('vect', vectorizer),
             ('clf', classifier)
         ])
     text_clf.fit(training_data_text, training_data_classification)
+
+    #train_features = vectorizer.fit_transform(training_data_text)
+    ##train_test = vectorizer.fit_transform(training_data_classification)
+    #text_clf = classifier
+    #text_clf.fit(train_features, training_data_classification)
+
     ###############################################
 
     ## Validate Model - k-fold Cross Validation ###
-    print("## Cross Validation Results ##")
+    print("### Cross Validation Results ###")
     print("Training Score: %f" % (text_clf.score(training_data_text, training_data_classification)))
 
     cv_scores = cross_val_score(text_clf, training_data_text, training_data_classification, cv=10, scoring='accuracy')
@@ -82,7 +106,7 @@ def main():
     ###############################################
 
     ## Test Model #################################
-    print("## Testing Results ##")
+    print("### Testing Results ###")
     print("Testing Score: %f" % (text_clf.score(testing_data_text, testing_data_classification)))
     
     predictions = text_clf.predict(testing_data_text)
