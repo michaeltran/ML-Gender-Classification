@@ -29,7 +29,7 @@ def main():
     testing_data_text = []
     testing_data_classification = []
 
-    # Prepare and Sanitize data
+    # Prepare and Sanitize data - 0 = Female, 1 = Male
     for i in range(len(df['Text'])):
         text = df['Text'][i]
         classification = df['Classification'][i]
@@ -71,7 +71,7 @@ def main():
     ###############################################
 
     ## Validate Model - k-fold Cross Validation ###
-    print("Cross Validation Results")
+    print("## Cross Validation Results ##")
     print("Training Score: %f" % (text_clf.score(training_data_text, training_data_classification)))
 
     cv_scores = cross_val_score(text_clf, training_data_text, training_data_classification, cv=10, scoring='accuracy')
@@ -82,17 +82,18 @@ def main():
     ###############################################
 
     ## Test Model #################################
-    print("Test Results")
+    print("## Testing Results ##")
     print("Testing Score: %f" % (text_clf.score(testing_data_text, testing_data_classification)))
     
     predictions = text_clf.predict(testing_data_text)
-    #print("Classification report:")
-    #print(classification_report(testing_data_classification, predictions))
-
-    #print("Confusion Matrix:")
-    #print(confusion_matrix(testing_data_classification, predictions))
-
     print("Testing Accuracy: %0.2f" % (accuracy_score(testing_data_classification, predictions)))
+
+    print("Classification Report:")
+    print(classification_report(testing_data_classification, predictions))
+
+    print("Confusion Matrix:")
+    print(confusion_matrix(testing_data_classification, predictions))
+
 
     #test_predicted_proba = text_clf.predict_proba(testing_data_text)
     #TP = 0
