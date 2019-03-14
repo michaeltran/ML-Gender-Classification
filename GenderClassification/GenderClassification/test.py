@@ -45,3 +45,33 @@
     #    testing_data_classification.append(training_data_classification[random_index])
     #    del training_data_text[random_index]
     #    del training_data_classification[random_index]
+
+
+
+
+    ################################################
+
+    ### Validate Model - k-fold Cross Validation ###
+    #print("### Cross Validation Results ###")
+    #print("Training Score: %f" % (text_clf.score(training_data_text, training_data_classification)))
+
+    #cv_scores = cross_val_score(text_clf, training_data_text, training_data_classification, cv=10, scoring='accuracy')
+    #print("Cross Validation Scores:")
+    #print(cv_scores) 
+    #print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
+    #print()
+    ################################################
+
+    ### Test Model #################################
+    #print("### Testing Results ###")
+    #print("Testing Score: %f" % (text_clf.score(testing_data_text, testing_data_classification)))
+    
+    #predictions = text_clf.predict(testing_data_text)
+    #print("Testing Accuracy: %0.2f" % (accuracy_score(testing_data_classification, predictions)))
+
+    #print("Classification Report:")
+    #print(classification_report(testing_data_classification, predictions))
+
+    #print("Confusion Matrix:")
+    #print(confusion_matrix(testing_data_classification, predictions))
+    ################################################

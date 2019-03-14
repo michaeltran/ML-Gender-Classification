@@ -1,143 +1,140 @@
 import argparse
 import pandas as pd
 import numpy as np
-import random
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.feature_extraction.text import HashingVectorizer
-from sklearn.feature_extraction import FeatureHasher
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.svm import LinearSVC
-from sklearn.pipeline import Pipeline
-from sklearn.tree import DecisionTreeClassifier
+import statistics
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from Classifier.Classifier import Classifier
 
-import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
+import nltk
+
+#import warnings
+#warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+def posNgrams(s,n):
+    '''Calculate POS n-grams and return a dictionary'''
+    text = nltk.word_tokenize(s)
+    text_tags = nltk.pos_tag(text)
+    taglist = []
+    output = {}
+    for item in text_tags: 
+        taglist.append(item[1])
+    for i in range(len(taglist)-n+1):
+        g = ' '.join(taglist[i:i+n])
+        output.setdefault(g,0)
+        output[g] += 1
+    return output
 
 def main():
+
+    test = posNgrams("it is sunny. it is sunny. out today", 3)
+
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--classifier', default='nb', help='nb | svm | dt')
+    #parser.add_argument('-c', '--classifier', default='nb', help='nb | svm | dt')
     parser.add_argument('-v', '--vectorizer', default='count', help='count | tfidf | hash')
     opts = parser.parse_args()
     ###############################################
 
     print("Vectorizer: %s" % (opts.vectorizer))
-    print("Classifier: %s" % (opts.classifier))
+    #print("Classifier: %s" % (opts.classifier))
 
     ## Build the Training Set and Testing Set #####
-    names = ['Text', 'Classification']
-    df = pd.read_excel('data/blog-gender-dataset.xlsx', header=None, names=names, usecols="A,B")
-
     training_data_text = []
     training_data_classification = []
     testing_data_text = []
     testing_data_classification = []
 
-    # Prepare and Sanitize data - 0 = Female, 1 = Male
+    names = ['Classification', 'Text']
+    df = pd.read_excel('data/train_data.xlsx', header=None, names=names, usecols="A,B")
+
     for i in range(len(df['Text'])):
         text = df['Text'][i]
         classification = df['Classification'][i]
-        if text == text and classification == classification:
-            training_data_text.append(text)
-            classification = classification.strip().upper()
-            if classification == 'M':
-                training_data_classification.append(1)
-            elif classification == 'F':
-                training_data_classification.append(0)
-            else:
-                print('Classification Error: %s is not defined.' % (classification))
-                return
+        training_data_text.append(text)
+        training_data_classification.append(classification)
 
-    # Split out a Testing dataset
-    len_testing_data = int(len(training_data_text)/10)
-    for i in range(len_testing_data):
-        random_index = random.randint(0, len(training_data_text) - 1)
-        testing_data_text.append(training_data_text[random_index])
-        testing_data_classification.append(training_data_classification[random_index])
-        del training_data_text[random_index]
-        del training_data_classification[random_index]
+    df = pd.read_excel('data/test_data.xlsx', header=None, names=names, usecols="A,B")
+    for i in range(len(df['Text'])):
+        text = df['Text'][i]
+        classification = df['Classification'][i]
+        testing_data_text.append(text)
+        testing_data_classification.append(classification)
     ###############################################
 
-    ## Build and Train Model ######################
-    if opts.vectorizer == 'count':
-        vectorizer = CountVectorizer()
-    elif opts.vectorizer == 'tfidf':
-        vectorizer = TfidfVectorizer()
-    elif opts.vectorizer == 'hash':
-        vectorizer = HashingVectorizer(non_negative=True) # This seems like it isn't good
-    else:
-        print('Unknown Vectorizer: %s' % (opts.vectorizer))
+    clf = Classifier()
 
-    if opts.classifier == 'nb':
-        classifier = MultinomialNB()
-    elif opts.classifier == 'svm':
-        classifier = LinearSVC()
-    elif opts.classifier == 'dt':
-        classifier = DecisionTreeClassifier()
-    else:
-        print('Unknown Classifier: %s' % (opts.classifier))
-        return
+    nb_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'nb')
+    svm_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'svm')
+    dt_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'dt')
+    rf_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'rf')
+    log_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'log')
 
-    text_clf = Pipeline([
-            ('vect', vectorizer),
-            ('clf', classifier)
-        ])
-    text_clf.fit(training_data_text, training_data_classification)
-
-    #train_features = vectorizer.fit_transform(training_data_text)
-    ##train_test = vectorizer.fit_transform(training_data_classification)
-    #text_clf = classifier
-    #text_clf.fit(train_features, training_data_classification)
-
-    ###############################################
-
-    ## Validate Model - k-fold Cross Validation ###
-    print("### Cross Validation Results ###")
-    print("Training Score: %f" % (text_clf.score(training_data_text, training_data_classification)))
-
-    cv_scores = cross_val_score(text_clf, training_data_text, training_data_classification, cv=10, scoring='accuracy')
-    print("Cross Validation Scores:")
-    print(cv_scores) 
-    print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
-    print()
-    ###############################################
+    #nb_female_acc, nb_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'nb')
+    #svm_female_acc, svm_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'svm')
+    #dt_female_acc, dt_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'dt')
+    #rf_female_acc, rf_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'rf')
+    #log_female_acc, log_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'log')
 
     ## Test Model #################################
-    print("### Testing Results ###")
-    print("Testing Score: %f" % (text_clf.score(testing_data_text, testing_data_classification)))
-    
-    predictions = text_clf.predict(testing_data_text)
-    print("Testing Accuracy: %0.2f" % (accuracy_score(testing_data_classification, predictions)))
+    nb_predictions = nb_clf.predict(testing_data_text)
+    svm_predictions = svm_clf.predict(testing_data_text)
+    dt_predictions = dt_clf.predict(testing_data_text)
+    rf_predictions = rf_clf.predict(testing_data_text)
+    log_predictions = log_clf.predict(testing_data_text)
 
-    print("Classification Report:")
-    print(classification_report(testing_data_classification, predictions))
+    #correct_classifications = 0
+    #for (clsif, nb_pred, svm_pred, dt_pred, rf_pred, log_pred) in zip(testing_data_classification, nb_predictions, svm_predictions, dt_predictions, rf_predictions, log_predictions):
+    #    male_weighted_score = 0
+    #    female_weighted_score = 0
 
-    print("Confusion Matrix:")
-    print(confusion_matrix(testing_data_classification, predictions))
-
-
-    #test_predicted_proba = text_clf.predict_proba(testing_data_text)
-    #TP = 0
-    #TN = 0
-    #FP = 0
-    #FN = 0
-
-    #for (a, b) in zip(testing_data_classification, predictions):
-    #    if a == b:
-    #        if a == 1:
-    #            TP += 1
-    #        else:
-    #            TN += 1
+    #    if nb_pred == 1:
+    #        male_weighted_score += nb_male_acc
     #    else:
-    #        if a == 1:
-    #            FN += 1
-    #        else:
-    #            FP += 1
-    #    print("%d %d" % (a, b))
-    ###############################################
+    #        female_weighted_score += nb_female_acc
+
+    #    if svm_pred == 1:
+    #        male_weighted_score += svm_male_acc
+    #    else:
+    #        female_weighted_score += svm_female_acc
+
+    #    if dt_pred == 1:
+    #        male_weighted_score += dt_male_acc
+    #    else:
+    #        female_weighted_score += dt_female_acc
+
+    #    if rf_pred == 1:
+    #        male_weighted_score += rf_male_acc
+    #    else:
+    #        female_weighted_score += rf_female_acc
+
+    #    if log_pred == 1:
+    #        male_weighted_score += log_male_acc
+    #    else:
+    #        female_weighted_score += log_female_acc
+
+    #    if male_weighted_score > female_weighted_score:
+    #        # predict male
+    #        if clsif == 1:
+    #            correct_classifications += 1
+    #    else:
+    #        #predict female
+    #        if clsif == 0:
+    #            correct_classifications += 1
+
+    #print("Mixed Accuracy: %0.2f" % (correct_classifications / len(testing_data_classification)))
+
+    print("NB Accuracy: %0.2f" % (accuracy_score(testing_data_classification, nb_predictions)))
+    print("SVM Accuracy: %0.2f" % (accuracy_score(testing_data_classification, svm_predictions)))
+    print("DT Accuracy: %0.2f" % (accuracy_score(testing_data_classification, dt_predictions)))
+    print("RF Accuracy: %0.2f" % (accuracy_score(testing_data_classification, rf_predictions)))
+    print("LOG Accuracy: %0.2f" % (accuracy_score(testing_data_classification, log_predictions)))
+    print("AVG: %0.2f" % (statistics.mean([accuracy_score(testing_data_classification, nb_predictions), 
+                               accuracy_score(testing_data_classification, svm_predictions), 
+                               accuracy_score(testing_data_classification, dt_predictions),
+                               accuracy_score(testing_data_classification, rf_predictions),
+                               accuracy_score(testing_data_classification, log_predictions)])
+                          ))
 
     return
 

@@ -1,5 +1,6 @@
+import nltk
 import argparse
-import xlsxwriter 
+import xlsxwriter
 import pandas as pd
 from random import shuffle
 
@@ -27,11 +28,19 @@ def SplitData():
         text = df['Text'][i]
         classification = df['Classification'][i]
         if text == text and classification == classification:
+            tokens = nltk.word_tokenize(text)
+            tagged = nltk.pos_tag(tokens)
+            pos_text = []
+
+            for (a,b) in tagged:
+                pos_text.append('%s_%s' % (a, b))
+                #pos_text.append('%s' % (b))
+
             classification = classification.strip().upper()
             if classification == 'M':
-                data_male_text.append(text)
+                data_male_text.append(' '.join(pos_text))
             elif classification == 'F':
-                data_female_text.append(text)
+                data_female_text.append(' '.join(pos_text))
             else:
                 print('Classification Error: %s is not defined.' % (classification))
                 return
@@ -73,7 +82,7 @@ def SplitData():
     workbook.close()
 
     # Save Testing Data
-    workbook = xlsxwriter.Workbook('data/testing_data.xlsx') 
+    workbook = xlsxwriter.Workbook('data/test_data.xlsx') 
     worksheet = workbook.add_worksheet()
     row = 0
     col = 0

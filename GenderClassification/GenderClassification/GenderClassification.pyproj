@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>368390ec-9e9f-45ab-8f29-8c6d844beff7</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>DataSplitter.py</StartupFile>
+    <StartupFile>GenderClassification.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -13,7 +13,7 @@
     <RootNamespace>GenderClassification</RootNamespace>
     <InterpreterId>Global|ContinuumAnalytics|Anaconda36-64</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--classifier nb --vectorizer hash</CommandLineArguments>
+    <CommandLineArguments>--vectorizer count</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -25,6 +25,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Classifier\Classifier.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DataSplitter.py">
       <SubType>Code</SubType>
     </Compile>
@@ -38,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="data\" />
+    <Folder Include="Classifier\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="data\blog-gender-dataset.xlsx" />
