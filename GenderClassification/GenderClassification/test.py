@@ -75,3 +75,25 @@
     #print("Confusion Matrix:")
     #print(confusion_matrix(testing_data_classification, predictions))
     ################################################
+
+
+
+## CHI STATISTIC MANUALLY
+        #test1 = np.extract(Y, X[:,1])
+        #test = np.where(test1 > 0)
+        #W = float(test[0].size)
+
+        #test = np.where(X[:,1] > 0)
+        #x = float(test[0].size - W)
+
+        #test = np.where(test1 == 0)
+        #y = float(test[0].size)
+
+        #test = np.where(X[:,1] == 0)
+        #Z = float(test[0].size - y)
+
+        #N = W + x + y + Z
+
+        #chiiii = (N * np.power((W * Z - y * x), 2)) / ((W + y) * (x + Z) * (W + x) * (y + Z))
+
+

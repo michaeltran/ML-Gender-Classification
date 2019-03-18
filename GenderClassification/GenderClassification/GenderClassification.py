@@ -2,6 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 import statistics
+import time
 from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from Classifier.Classifier import Classifier
@@ -26,6 +27,8 @@ def posNgrams(s,n):
     return output
 
 def main():
+
+    start = time.time()
 
     test = posNgrams("it is sunny. it is sunny. out today", 3)
 
@@ -64,11 +67,14 @@ def main():
 
     clf = Classifier()
 
-    nb_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'nb')
-    svm_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'svm')
-    dt_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'dt')
-    rf_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'rf')
-    log_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'log')
+    features = None
+    features = clf.GetFeatures(training_data_text, training_data_classification, opts.vectorizer)
+
+    nb_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'nb', features)
+    svm_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'svm', features)
+    #dt_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'dt')
+    #rf_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'rf')
+    #log_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'log')
 
     #nb_female_acc, nb_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'nb')
     #svm_female_acc, svm_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'svm')
@@ -79,9 +85,9 @@ def main():
     ## Test Model #################################
     nb_predictions = nb_clf.predict(testing_data_text)
     svm_predictions = svm_clf.predict(testing_data_text)
-    dt_predictions = dt_clf.predict(testing_data_text)
-    rf_predictions = rf_clf.predict(testing_data_text)
-    log_predictions = log_clf.predict(testing_data_text)
+    #dt_predictions = dt_clf.predict(testing_data_text)
+    #rf_predictions = rf_clf.predict(testing_data_text)
+    #log_predictions = log_clf.predict(testing_data_text)
 
     #correct_classifications = 0
     #for (clsif, nb_pred, svm_pred, dt_pred, rf_pred, log_pred) in zip(testing_data_classification, nb_predictions, svm_predictions, dt_predictions, rf_predictions, log_predictions):
@@ -126,15 +132,18 @@ def main():
 
     print("NB Accuracy: %0.2f" % (accuracy_score(testing_data_classification, nb_predictions)))
     print("SVM Accuracy: %0.2f" % (accuracy_score(testing_data_classification, svm_predictions)))
-    print("DT Accuracy: %0.2f" % (accuracy_score(testing_data_classification, dt_predictions)))
-    print("RF Accuracy: %0.2f" % (accuracy_score(testing_data_classification, rf_predictions)))
-    print("LOG Accuracy: %0.2f" % (accuracy_score(testing_data_classification, log_predictions)))
-    print("AVG: %0.2f" % (statistics.mean([accuracy_score(testing_data_classification, nb_predictions), 
-                               accuracy_score(testing_data_classification, svm_predictions), 
-                               accuracy_score(testing_data_classification, dt_predictions),
-                               accuracy_score(testing_data_classification, rf_predictions),
-                               accuracy_score(testing_data_classification, log_predictions)])
-                          ))
+    #print("DT Accuracy: %0.2f" % (accuracy_score(testing_data_classification, dt_predictions)))
+    #print("RF Accuracy: %0.2f" % (accuracy_score(testing_data_classification, rf_predictions)))
+    #print("LOG Accuracy: %0.2f" % (accuracy_score(testing_data_classification, log_predictions)))
+    #print("AVG: %0.2f" % (statistics.mean([accuracy_score(testing_data_classification, nb_predictions), 
+    #                           accuracy_score(testing_data_classification, svm_predictions), 
+    #                           accuracy_score(testing_data_classification, dt_predictions),
+    #                           accuracy_score(testing_data_classification, rf_predictions),
+    #                           accuracy_score(testing_data_classification, log_predictions)])
+    #                      ))
+
+    end = time.time()
+    print("Time Run = %fs" % (end - start))
 
     return
 
