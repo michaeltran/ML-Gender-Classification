@@ -19,9 +19,6 @@ from sklearn.feature_selection import mutual_info_classif
 
 from sklearn.model_selection import cross_val_score
 
-#import warnings
-#warnings.filterwarnings("ignore", category=DeprecationWarning)
-
 class Classifier(object):
 
     def GetFeatures(self, training_data_text, training_data_classification, vectorizer_type):
@@ -119,6 +116,22 @@ class Classifier(object):
 
         return text_clf
 
+    def GetContingencyTable(self, X, Y, feature):
+        X_When_Y_1 = np.extract(Y, X[:,feature])
+        temp = np.where(X_When_Y_1 > 0)
+        w = float(temp[0].size)
+
+        temp = np.where(X[:,feature] > 0)
+        x = float(temp[0].size - w)
+
+        temp = np.where(X_When_Y_1 == 0)
+        y = float(temp[0].size)
+
+        temp = np.where(X[:,feature] == 0)
+        z = float(temp[0].size - y)
+
+        return w, x, y, z
+
     def InformationGain(self, X, Y):
         IG = []
         C = Y.count(1)
@@ -128,18 +141,7 @@ class Classifier(object):
         P_c_ = 1 - P_c
 
         for i in range(X.shape[1]):
-            X_When_Y_1 = np.extract(Y, X[:,i])
-            temp = np.where(X_When_Y_1 > 0)
-            w = float(temp[0].size)
-
-            temp = np.where(X[:,i] > 0)
-            x = float(temp[0].size - w)
-
-            temp = np.where(X_When_Y_1 == 0)
-            y = float(temp[0].size)
-
-            temp = np.where(X[:,i] == 0)
-            z = float(temp[0].size - y)
+            w, x, y, z = self.GetContingencyTable(X, Y, i)
 
             P_f = (w + x) / N
             P_f_ = 1 - P_f
@@ -170,15 +172,7 @@ class Classifier(object):
         P_c_ = 1 - P_c
 
         for i in range(X.shape[1]):
-            X_When_Y_1 = np.extract(Y, X[:,i])
-            temp = np.where(X_When_Y_1 > 0)
-            w = float(temp[0].size)
-            temp = np.where(X[:,i] > 0)
-            x = float(temp[0].size - w)
-            temp = np.where(X_When_Y_1 == 0)
-            y = float(temp[0].size)
-            temp = np.where(X[:,i] == 0)
-            z = float(temp[0].size - y)
+            w, x, y, z = self.GetContingencyTable(X, Y, i)
 
             P_fc = w / N
             P_fc_ = x / N
@@ -215,19 +209,20 @@ class Classifier(object):
         P_c_ = 1 - P_c
 
         for i in range(X.shape[1]):
-            X_When_Y_1 = np.extract(Y, X[:,i])
-            temp = np.where(X_When_Y_1 > 0)
-            w = float(temp[0].size)
-            temp = np.where(X[:,i] > 0)
-            x = float(temp[0].size - w)
-            temp = np.where(X_When_Y_1 == 0)
-            y = float(temp[0].size)
-            temp = np.where(X[:,i] == 0)
-            z = float(temp[0].size - y)
+            w, x, y, z = self.GetContingencyTable(X, Y, i)
 
             P_f = (w + x) / N
 
-            CE_ = P_f * ((w / (w + x)) * np.log2((w / (w + x)) / P_f) + (x / (w + x)) * np.log2((x / (w + x)) / P_f))
+            P_cGf = w / (w + x)
+            P_c_Gf = x / (w + x)
+
+            CE1 = 0
+            CE2 = 0
+            if P_cGf != 0:
+                CE1 = P_cGf * np.log2(P_cGf / P_f)
+            if P_c_Gf != 0:
+                CE2 = P_c_Gf * np.log2(P_c_Gf / P_f)
+            CE_ = P_f * (CE1 + CE2)
 
             CE.append(CE_)
         return CE
@@ -241,14 +236,20 @@ class Classifier(object):
         P_c_ = 1 - P_c
 
         for i in range(X.shape[1]):
-            X_When_Y_1 = np.extract(Y, X[:,i])
+            #w, x, y, z = self.GetContingencyTable(X, Y, i)
+
+            feature = i
+            X_When_Y_1 = np.extract(Y, X[:,feature])
             temp = np.where(X_When_Y_1 > 0)
             w = float(temp[0].size)
-            temp = np.where(X[:,i] > 0)
+
+            temp = np.where(X[:,feature] > 0)
             x = float(temp[0].size - w)
+
             temp = np.where(X_When_Y_1 == 0)
             y = float(temp[0].size)
-            temp = np.where(X[:,i] == 0)
+
+            temp = np.where(X[:,feature] == 0)
             z = float(temp[0].size - y)
 
             P_f = (w + x) / N
@@ -257,8 +258,13 @@ class Classifier(object):
             P_cGf = w / (w + x)
             P_c_Gf = x / (w + x)
 
-            WET1 = P_c * P_f * abs(np.log2( (P_cGf * (1 - P_c)) / (P_c * (1 - P_cGf)) ))
-            WET2 = P_c_ * P_f * abs(np.log2( (P_c_Gf * (1 - P_c_)) / (P_c_ * (1 - P_c_Gf)) ))
+            WET1 = 0
+            WET2 = 0
+
+            if P_cGf != 1 and P_cGf != 0:
+                WET1 = P_c * P_f * abs(np.log2( (P_cGf * (1 - P_c)) / (P_c * (1 - P_cGf)) ))
+            if P_c_Gf != 1 and P_c_Gf != 0:
+                WET2 = P_c_ * P_f * abs(np.log2( (P_c_Gf * (1 - P_c_)) / (P_c_ * (1 - P_c_Gf)) ))
 
             WET_ = WET1 + WET2
 
@@ -266,19 +272,17 @@ class Classifier(object):
         return WET
 
     def EFS(self, X, Y):
-        t = 3 # number of feature selection algorithms
-        w = int(X.shape[1]/100) # window size
-        tau_i = int(X.shape[1]/20) # tau
-        step_size = int(w / 5)
-
-        #test = self.InformationGain(X, Y)
+        t = 5                       # number of feature scoring algorithms
+        w = int(X.shape[1]/100)     # window size
+        tau_i = int(X.shape[1]/20)  # tau
+        step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
 
         Xi = []
         Xi.append(chi2(X, Y)[0])
         Xi.append(self.InformationGain(X, Y))
         Xi.append(self.MutualInformation(X, Y))
-        #Xi.append(self.CrossEntropy(X, Y))
-        #Xi.append(self.WeightOfEvidenceForText(X, Y))
+        Xi.append(self.CrossEntropy(X, Y))
+        Xi.append(self.WeightOfEvidenceForText(X, Y))
 
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
 
