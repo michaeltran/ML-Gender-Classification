@@ -28,19 +28,21 @@ def SplitData():
         text = df['Text'][i]
         classification = df['Classification'][i]
         if text == text and classification == classification:
-            tokens = nltk.word_tokenize(text)
-            tagged = nltk.pos_tag(tokens)
-            pos_text = []
+            #tokens = nltk.word_tokenize(text)
+            #tagged = nltk.pos_tag(tokens)
+            #pos_text = []
 
-            for (a,b) in tagged:
-                pos_text.append('%s_%s' % (a, b))
-                #pos_text.append('%s' % (b))
+            #for (a,b) in tagged:
+            #    #pos_text.append('%s_%s' % (a, b))
+            #    pos_text.append('%s' % (a))
 
             classification = classification.strip().upper()
             if classification == 'M':
-                data_male_text.append(' '.join(pos_text))
+                #data_male_text.append(' '.join(pos_text))
+                data_male_text.append(text)
             elif classification == 'F':
-                data_female_text.append(' '.join(pos_text))
+                #data_female_text.append(' '.join(pos_text))
+                data_female_text.append(text)
             else:
                 print('Classification Error: %s is not defined.' % (classification))
                 return
@@ -76,8 +78,11 @@ def SplitData():
     row = 0
     col = 0
     for i in range(len(training_data_text)):
+        text = training_data_text[i]
         worksheet.write(row, col, training_data_classification[i])
-        worksheet.write(row, col + 1, training_data_text[i])
+        worksheet.write(row, col + 1, text)
+        worksheet.write(row, col + 2, len(text))
+        worksheet.write(row, col + 3, GetFMeasure(text))
         row += 1
     workbook.close()
 
@@ -87,11 +92,58 @@ def SplitData():
     row = 0
     col = 0
     for i in range(len(testing_data_text)):
+        text = testing_data_text[i]
         worksheet.write(row, col, testing_data_classification[i])
-        worksheet.write(row, col + 1, testing_data_text[i])
+        worksheet.write(row, col + 1, text)
+        worksheet.write(row, col + 2, len(text))
+        worksheet.write(row, col + 3, GetFMeasure(text))
         row += 1
     workbook.close()
     ###############################################
+    print("Done")
 
+def GetFMeasure(text):
+    tokens = nltk.word_tokenize(text)
+    tagged = nltk.pos_tag(tokens)
+
+    freq = {}
+    freq['noun'] = 0
+    freq['adj'] = 0
+    freq['prep'] = 0
+    freq['art'] = 0
+    freq['pron'] = 0
+    freq['verb'] = 0
+    freq['adv'] = 0
+    freq['int'] = 0
+
+    count = 0
+    for i in range(len(tagged)):
+        pos = tagged[i][1]
+        if pos in ['NN', 'NNS', 'NNP', 'NNPS']:
+            freq['noun'] += 1
+        elif pos in ['JJ', 'JJR', 'JJS']:
+            freq['adj'] += 1
+        elif pos in ['IN']:
+            freq['prep'] += 1
+        elif pos in ['DET']:
+            freq['art'] += 1
+        elif pos in ['PRP', 'PRP$', 'WP', 'WP$']:
+            freq['pron'] += 1
+        elif pos in ['VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ']:
+            freq['verb'] += 1
+        elif pos in ['RB', 'RBR', 'RBS', 'WRB']:
+            freq['adv'] += 1
+        elif pos in ['UH']:
+            freq['int'] += 1
+
+        if pos not in ['$', "'", '(', ')', ',', '-', '.', ':', 'SYM', "''", '``']:
+            count += 1
+
+    for key in freq:
+        freq[key] = (freq[key] / count) * 100
+
+    fmeasure = 0.5 * ( (freq['noun'] + freq['adj'] + freq['prep'] + freq['art']) - (freq['pron'] + freq['verb'] + freq['adv'] + freq['int']) + 100 )
+
+    return fmeasure
 
 SplitData()

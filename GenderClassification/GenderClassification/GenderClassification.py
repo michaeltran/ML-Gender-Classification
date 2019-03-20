@@ -1,3 +1,4 @@
+import sys
 import argparse
 import pandas as pd
 import numpy as np
@@ -7,30 +8,18 @@ from sklearn.model_selection import cross_val_score
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 from Classifier.Classifier import Classifier
 
+from sklearn.naive_bayes import MultinomialNB
+
 import nltk
 
 #import warnings
 #warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-def posNgrams(s,n):
-    '''Calculate POS n-grams and return a dictionary'''
-    text = nltk.word_tokenize(s)
-    text_tags = nltk.pos_tag(text)
-    taglist = []
-    output = {}
-    for item in text_tags: 
-        taglist.append(item[1])
-    for i in range(len(taglist)-n+1):
-        g = ' '.join(taglist[i:i+n])
-        output.setdefault(g,0)
-        output[g] += 1
-    return output
+#import sys
+#sys.stdout = open("output.txt", "a")
 
 def main():
-
     start = time.time()
-
-    test = posNgrams("it is sunny. it is sunny. out today", 3)
 
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
@@ -43,35 +32,50 @@ def main():
     #print("Classifier: %s" % (opts.classifier))
 
     ## Build the Training Set and Testing Set #####
-    training_data_text = []
+    training_data_dict = {}
+    training_data_dict['text'] = []
+    training_data_dict['length'] = []
+    training_data_dict['fmeasure'] = []
     training_data_classification = []
-    testing_data_text = []
+
+    testing_data_dict = {}
+    testing_data_dict['text'] = []
+    testing_data_dict['length'] = []
+    testing_data_dict['fmeasure'] = []
     testing_data_classification = []
 
-    names = ['Classification', 'Text']
-    df = pd.read_excel('data/train_data.xlsx', header=None, names=names, usecols="A,B")
+    names = ['Classification', 'Text', 'Length', 'F-Measure']
+    df = pd.read_excel('data/train_data.xlsx', header=None, names=names, usecols="A,B,C,D")
 
     for i in range(len(df['Text'])):
         text = df['Text'][i]
         classification = df['Classification'][i]
-        training_data_text.append(text)
+        text_length = df['Length'][i]
+        fmeasure = df['F-Measure'][i]
+        training_data_dict['text'].append(text)
+        training_data_dict['length'].append(text_length)
+        training_data_dict['fmeasure'].append(fmeasure)
         training_data_classification.append(classification)
 
-    df = pd.read_excel('data/test_data.xlsx', header=None, names=names, usecols="A,B")
+    df = pd.read_excel('data/test_data.xlsx', header=None, names=names, usecols="A,B,C,D")
     for i in range(len(df['Text'])):
         text = df['Text'][i]
         classification = df['Classification'][i]
-        testing_data_text.append(text)
+        text_length = df['Length'][i]
+        fmeasure = df['F-Measure'][i]
+        testing_data_dict['text'].append(text)
+        testing_data_dict['length'].append(text_length)
+        testing_data_dict['fmeasure'].append(fmeasure)
         testing_data_classification.append(classification)
     ###############################################
 
     clf = Classifier()
 
     features = None
-    features = clf.GetFeatures(training_data_text, training_data_classification, opts.vectorizer)
+    features = clf.GetFeatures(training_data_dict['text'], training_data_classification, opts.vectorizer)
 
-    nb_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'nb', features)
-    svm_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'svm', features)
+    nb_clf = clf.BuildClassifier(training_data_dict, training_data_classification, opts.vectorizer, 'nb', features)
+    #svm_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'svm', features)
     #dt_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'dt')
     #rf_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'rf')
     #log_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'log')
@@ -82,12 +86,36 @@ def main():
     #rf_female_acc, rf_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'rf')
     #log_female_acc, log_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'log')
 
+    #vectorizer = nb_clf.named_steps['vectorizer']
+    #reducer = nb_clf.named_steps['reducer']
+    classif = nb_clf.named_steps['clf']
+
+    feats = nb_clf.named_steps['features']
+
     ## Test Model #################################
-    nb_predictions = nb_clf.predict(testing_data_text)
-    svm_predictions = svm_clf.predict(testing_data_text)
+    test0 = feats.transform(testing_data_dict)
+    #test1 = reducer.transform(test0)
+    nb_predictions = classif.predict(test0)
+    nb_predictions_2 = nb_clf.predict(testing_data_dict)
+
+    #nb_predictions = nb_clf.predict(testing_data_text)
+    #svm_predictions = svm_clf.predict(testing_data_text)
     #dt_predictions = dt_clf.predict(testing_data_text)
     #rf_predictions = rf_clf.predict(testing_data_text)
     #log_predictions = log_clf.predict(testing_data_text)
+
+    ### Validate Model - k-fold Cross Validation ###
+    print("### Cross Validation Results ###")
+    print("Training Score: %f" % (nb_clf.score(training_data_dict, training_data_classification)))
+
+    test2 = feats.transform(training_data_dict)
+    #test3 = reducer.transform(test2)
+    cv_scores = cross_val_score(MultinomialNB(), test2, training_data_classification, cv=10, scoring='accuracy')
+    print("Cross Validation Scores:")
+    print(cv_scores) 
+    print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
+    print()
+    ################################################
 
     #correct_classifications = 0
     #for (clsif, nb_pred, svm_pred, dt_pred, rf_pred, log_pred) in zip(testing_data_classification, nb_predictions, svm_predictions, dt_predictions, rf_predictions, log_predictions):
@@ -130,8 +158,9 @@ def main():
 
     #print("Mixed Accuracy: %0.2f" % (correct_classifications / len(testing_data_classification)))
 
+    print("NB Accuracy: %0.2f" % (accuracy_score(testing_data_classification, nb_predictions_2)))
     print("NB Accuracy: %0.2f" % (accuracy_score(testing_data_classification, nb_predictions)))
-    print("SVM Accuracy: %0.2f" % (accuracy_score(testing_data_classification, svm_predictions)))
+    #print("SVM Accuracy: %0.2f" % (accuracy_score(testing_data_classification, svm_predictions)))
     #print("DT Accuracy: %0.2f" % (accuracy_score(testing_data_classification, dt_predictions)))
     #print("RF Accuracy: %0.2f" % (accuracy_score(testing_data_classification, rf_predictions)))
     #print("LOG Accuracy: %0.2f" % (accuracy_score(testing_data_classification, log_predictions)))

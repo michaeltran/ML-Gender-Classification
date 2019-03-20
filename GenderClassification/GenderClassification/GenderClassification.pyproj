@@ -13,7 +13,8 @@
     <RootNamespace>GenderClassification</RootNamespace>
     <InterpreterId>Global|ContinuumAnalytics|Anaconda36-64</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>--vectorizer count</CommandLineArguments>
+    <CommandLineArguments>
+    </CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -25,6 +26,15 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Classes\ColumnExtractor.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Classes\EFS.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Classes\ItemSelector.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Classifier\Classifier.py">
       <SubType>Code</SubType>
     </Compile>
@@ -42,6 +52,7 @@
   <ItemGroup>
     <Folder Include="data\" />
     <Folder Include="Classifier\" />
+    <Folder Include="Classes\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="data\blog-gender-dataset.xlsx" />
