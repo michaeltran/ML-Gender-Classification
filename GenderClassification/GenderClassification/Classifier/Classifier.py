@@ -13,6 +13,7 @@ from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn import model_selection
 from sklearn.metrics import confusion_matrix
 from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import KBinsDiscretizer
 
 from sklearn.feature_selection import mutual_info_classif
 
@@ -53,8 +54,31 @@ class Classifier(object):
 
     def GetFeatures(self, training_data_text, training_data_classification, vectorizer_type):
         vectorizer = self.GetVectorizer(vectorizer_type)
-        X = vectorizer.fit_transform(training_data_text, training_data_classification)
+
+        vectorizer_pipeline = Pipeline([
+            ('features', FeatureUnion([
+                ('text', Pipeline([
+                    ('selector', ItemSelector(key='text')),
+                    ('vectorizer', vectorizer),
+                ])),
+                #('length', Pipeline([
+                #    ('selector', ItemSelector(key='length')),
+                #    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                #])),
+                #('fmeasure', Pipeline([
+                #    ('selector', ItemSelector(key='fmeasure')),
+                #    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                #])),
+                #('gpf', Pipeline([
+                #    ('selector', ItemSelector(key='gpf')),
+                #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                #])),
+            ]))
+        ])
+
+        X = vectorizer_pipeline.fit_transform(training_data_text, training_data_classification)
         candidate_feature_indexes = efs_obj.EFS(X.toarray(), training_data_classification)
+
         return candidate_feature_indexes
 
     def BuildClassifier(self, training_data_text, training_data_classification, vectorizer_type, classifier_type, features):
@@ -70,35 +94,53 @@ class Classifier(object):
         classifier = self.GetClassifier(classifier_type)
 
         text_clf = Pipeline([
-                ('features', FeatureUnion([
-                    ('text', Pipeline([
-                        ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer),
-                        ('reducer', reducer)
-                    ])),
-                    ('length', Pipeline([
-                        ('selector', ItemSelector(key='length')),
-                        ('count', FunctionTransformer(self.get_generic_array, validate = False))
-                    ])),
-                    ('fmeasure', Pipeline([
-                        ('selector', ItemSelector(key='fmeasure')),
-                        ('toarray', FunctionTransformer(self.get_generic_array, validate = False))
-                    ])),
+            ('features', FeatureUnion([
+                ('text', Pipeline([
+                    ('selector', ItemSelector(key='text')),
+                    ('vectorizer', vectorizer),
+                    ('reducer', reducer),
                 ])),
-                ('clf', classifier)
-            ])
+                ('length', Pipeline([
+                    ('selector', ItemSelector(key='length')),
+                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
+                ])),
+                ('fmeasure', Pipeline([
+                    ('selector', ItemSelector(key='fmeasure')),
+                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+                    ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
+                ])),
+                ('gpf', Pipeline([
+                    ('selector', ItemSelector(key='gpf')),
+                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                ])),
+                ('fa', Pipeline([
+                    ('selector', ItemSelector(key='fa')),
+                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                ])),
+            ])),
+            ('clf', classifier)
+        ])
 
         text_clf.fit(training_data_text, training_data_classification)
         ###############################################
 
         feats = text_clf.named_steps['features']
         test = feats.transform(training_data_text)
-        print(test)
+        print(test[0])
+        print(test[1])
 
         return text_clf
 
-    def get_generic_array(self, x):
+    def GetGenericArray(self, x):
         return np.array([t for t in x]).reshape(-1, 1)
+
+    def GetMultipleGenericArray(self, x):
+        return x
+
+    def GetIntArray(self, x):
+        return x.astype(int)
 
     def CrossValidationTest(self, X, Y, vectorizer_type, classifier_type):
         kf = model_selection.KFold(n_splits=10)

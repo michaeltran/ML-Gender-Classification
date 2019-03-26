@@ -10,13 +10,8 @@ from Classifier.Classifier import Classifier
 
 from sklearn.naive_bayes import MultinomialNB
 
-import nltk
-
 #import warnings
 #warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-#import sys
-#sys.stdout = open("output.txt", "a")
 
 def main():
     start = time.time()
@@ -36,49 +31,137 @@ def main():
     training_data_dict['text'] = []
     training_data_dict['length'] = []
     training_data_dict['fmeasure'] = []
+    training_data_dict['gpf'] = []
+    training_data_dict['fa'] = []
     training_data_classification = []
 
     testing_data_dict = {}
     testing_data_dict['text'] = []
     testing_data_dict['length'] = []
     testing_data_dict['fmeasure'] = []
+    testing_data_dict['gpf'] = []
+    testing_data_dict['fa'] = []
     testing_data_classification = []
 
-    names = ['Classification', 'Text', 'Length', 'F-Measure']
-    df = pd.read_excel('data/train_data.xlsx', header=None, names=names, usecols="A,B,C,D")
-
+    #df = pd.read_excel('data/train_data.xlsx', header=None, names=names, usecols="A,B,C,D,E,F,G,H,I,J,K,L,M,N")
+    df = pd.read_excel('data/train_data.xlsx', usecols="A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK")
     for i in range(len(df['Text'])):
+        gpf = []
+        fa = []
+        for j in range(10):
+            gpf.append(0)
+        for j in range(23):
+            fa.append(0)
+
         text = df['Text'][i]
         classification = df['Classification'][i]
         text_length = df['Length'][i]
         fmeasure = df['F-Measure'][i]
+        gpf[0] = df['GPF1'][i]
+        gpf[1] = df['GPF2'][i]
+        gpf[2] = df['GPF3'][i]
+        gpf[3] = df['GPF4'][i]
+        gpf[4] = df['GPF5'][i]
+        gpf[5] = df['GPF6'][i]
+        gpf[6] = df['GPF7'][i]
+        gpf[7] = df['GPF8'][i]
+        gpf[8] = df['GPF9'][i]
+        gpf[9] = df['GPF10'][i]
+        fa[0] = df['FA1'][i]
+        fa[1] = df['FA2'][i]
+        fa[2] = df['FA3'][i]
+        fa[3] = df['FA4'][i]
+        fa[4] = df['FA5'][i]
+        fa[5] = df['FA6'][i]
+        fa[6] = df['FA7'][i]
+        fa[7] = df['FA8'][i]
+        fa[8] = df['FA9'][i]
+        fa[9] = df['FA10'][i]
+        fa[10] = df['FA11'][i]
+        fa[11] = df['FA12'][i]
+        fa[12] = df['FA13'][i]
+        fa[13] = df['FA14'][i]
+        fa[14] = df['FA15'][i]
+        fa[15] = df['FA16'][i]
+        fa[16] = df['FA17'][i]
+        fa[17] = df['FA18'][i]
+        fa[18] = df['FA19'][i]
+        fa[19] = df['FA20'][i]
+        fa[20] = df['FA21'][i]
+        fa[21] = df['FA22'][i]
+        fa[22] = df['FA23'][i]
         training_data_dict['text'].append(text)
         training_data_dict['length'].append(text_length)
         training_data_dict['fmeasure'].append(fmeasure)
+        training_data_dict['gpf'].append(gpf)
+        training_data_dict['fa'].append(fa)
         training_data_classification.append(classification)
 
-    df = pd.read_excel('data/test_data.xlsx', header=None, names=names, usecols="A,B,C,D")
+    #df = pd.read_excel('data/test_data.xlsx', header=None, names=names, usecols="A,B,C,D,E,F,G,H,I,J,K,L,M,N")
+    df = pd.read_excel('data/test_data.xlsx', usecols="A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,AA,AB,AC,AD,AE,AF,AG,AH,AI,AJ,AK")
     for i in range(len(df['Text'])):
+        gpf = []
+        fa = []
+        for j in range(10):
+            gpf.append(0)
+        for j in range(23):
+            fa.append(0)
+
         text = df['Text'][i]
         classification = df['Classification'][i]
         text_length = df['Length'][i]
         fmeasure = df['F-Measure'][i]
+        gpf[0] = df['GPF1'][i]
+        gpf[1] = df['GPF2'][i]
+        gpf[2] = df['GPF3'][i]
+        gpf[3] = df['GPF4'][i]
+        gpf[4] = df['GPF5'][i]
+        gpf[5] = df['GPF6'][i]
+        gpf[6] = df['GPF7'][i]
+        gpf[7] = df['GPF8'][i]
+        gpf[8] = df['GPF9'][i]
+        gpf[9] = df['GPF10'][i]
+        fa[0] = df['FA1'][i]
+        fa[1] = df['FA2'][i]
+        fa[2] = df['FA3'][i]
+        fa[3] = df['FA4'][i]
+        fa[4] = df['FA5'][i]
+        fa[5] = df['FA6'][i]
+        fa[6] = df['FA7'][i]
+        fa[7] = df['FA8'][i]
+        fa[8] = df['FA9'][i]
+        fa[9] = df['FA10'][i]
+        fa[10] = df['FA11'][i]
+        fa[11] = df['FA12'][i]
+        fa[12] = df['FA13'][i]
+        fa[13] = df['FA14'][i]
+        fa[14] = df['FA15'][i]
+        fa[15] = df['FA16'][i]
+        fa[16] = df['FA17'][i]
+        fa[17] = df['FA18'][i]
+        fa[18] = df['FA19'][i]
+        fa[19] = df['FA20'][i]
+        fa[20] = df['FA21'][i]
+        fa[21] = df['FA22'][i]
+        fa[22] = df['FA23'][i]
         testing_data_dict['text'].append(text)
         testing_data_dict['length'].append(text_length)
         testing_data_dict['fmeasure'].append(fmeasure)
+        testing_data_dict['gpf'].append(gpf)
+        testing_data_dict['fa'].append(fa)
         testing_data_classification.append(classification)
     ###############################################
 
     clf = Classifier()
 
     features = None
-    features = clf.GetFeatures(training_data_dict['text'], training_data_classification, opts.vectorizer)
+    features = clf.GetFeatures(training_data_dict, training_data_classification, opts.vectorizer)
 
     nb_clf = clf.BuildClassifier(training_data_dict, training_data_classification, opts.vectorizer, 'nb', features)
-    #svm_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'svm', features)
-    #dt_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'dt')
-    #rf_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'rf')
-    #log_clf = clf.RunClassifier(training_data_text, training_data_classification, opts.vectorizer, 'log')
+    #svm_clf = clf.BuildClassifier(training_data_dict, training_data_classification, opts.vectorizer, 'svm', features)
+    #dt_clf = clf.BuildClassifier(testing_data_dict, training_data_classification, opts.vectorizer, 'dt')
+    #rf_clf = clf.BuildClassifier(testing_data_dict, training_data_classification, opts.vectorizer, 'rf')
+    #log_clf = clf.BuildClassifier(testing_data_dict, training_data_classification, opts.vectorizer, 'log')
 
     #nb_female_acc, nb_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'nb')
     #svm_female_acc, svm_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'svm')
@@ -87,32 +170,31 @@ def main():
     #log_female_acc, log_male_acc = clf.CrossValidationTest(training_data_text, training_data_classification, opts.vectorizer, 'log')
 
     #vectorizer = nb_clf.named_steps['vectorizer']
-    #reducer = nb_clf.named_steps['reducer']
     classif = nb_clf.named_steps['clf']
-
     feats = nb_clf.named_steps['features']
+    #reducer = nb_clf.named_steps['reducer']
 
     ## Test Model #################################
     test0 = feats.transform(testing_data_dict)
-    #test1 = reducer.transform(test0)
+    #test0 = reducer.transform(test0)
     nb_predictions = classif.predict(test0)
     nb_predictions_2 = nb_clf.predict(testing_data_dict)
 
-    #nb_predictions = nb_clf.predict(testing_data_text)
-    #svm_predictions = svm_clf.predict(testing_data_text)
-    #dt_predictions = dt_clf.predict(testing_data_text)
-    #rf_predictions = rf_clf.predict(testing_data_text)
-    #log_predictions = log_clf.predict(testing_data_text)
+    #nb_predictions = nb_clf.predict(testing_data_dict)
+    #svm_predictions = svm_clf.predict(testing_data_dict)
+    #dt_predictions = dt_clf.predict(testing_data_dict)
+    #rf_predictions = rf_clf.predict(testing_data_dict)
+    #log_predictions = log_clf.predict(testing_data_dict)
 
     ### Validate Model - k-fold Cross Validation ###
     print("### Cross Validation Results ###")
     print("Training Score: %f" % (nb_clf.score(training_data_dict, training_data_classification)))
 
     test2 = feats.transform(training_data_dict)
-    #test3 = reducer.transform(test2)
+    #test2 = reducer.transform(test2)
     cv_scores = cross_val_score(MultinomialNB(), test2, training_data_classification, cv=10, scoring='accuracy')
     print("Cross Validation Scores:")
-    print(cv_scores) 
+    #print(cv_scores) 
     print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
     print()
     ################################################
@@ -170,6 +252,10 @@ def main():
     #                           accuracy_score(testing_data_classification, rf_predictions),
     #                           accuracy_score(testing_data_classification, log_predictions)])
     #                      ))
+
+    svm_clf = clf.BuildClassifier(training_data_dict, training_data_classification, opts.vectorizer, 'svm', features)
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM Accuracy: %0.2f" % (accuracy_score(testing_data_classification, svm_predictions)))
 
     end = time.time()
     print("Time Run = %fs" % (end - start))
