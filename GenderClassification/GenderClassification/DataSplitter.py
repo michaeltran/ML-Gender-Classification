@@ -4,10 +4,15 @@ import xlsxwriter
 import pandas as pd
 from random import shuffle
 
+from MinePOSPats import MinePOSPats
+
+import numpy as np
+
 def SplitData():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
+    parser.add_argument('-m', '--mine', default=False, help ='')
     opts = parser.parse_args()
     ###############################################
 
@@ -28,27 +33,30 @@ def SplitData():
         text = df['Text'][i]
         classification = df['Classification'][i]
         if text == text and classification == classification:
-            #tokens = nltk.word_tokenize(text)
-            #tagged = nltk.pos_tag(tokens)
-            #pos_text = []
-
-            #for (a,b) in tagged:
-            #    #pos_text.append('%s_%s' % (a, b))
-            #    pos_text.append('%s' % (a))
-
             classification = classification.strip().upper()
             if classification == 'M':
-                #data_male_text.append(' '.join(pos_text))
                 data_male_text.append(text)
             elif classification == 'F':
-                #data_female_text.append(' '.join(pos_text))
                 data_female_text.append(text)
             else:
                 print('Classification Error: %s is not defined.' % (classification))
                 return
 
+    if opts.mine == True:
+        mine_obj = MinePOSPats(data_male_text + data_female_text, 0.3, 0.2)
+        pos_pats = mine_obj.MinePOSPats()
+
+        # Write POS Patterns to Text
+        with open('data/POSPatterns.txt', 'w') as file:
+            patterns = []
+            for pos_pat in pos_pats:
+                pattern = ' '.join(pos_pat)
+                patterns.append(pattern)
+            file.write('||'.join(patterns))
+
     shuffle(data_male_text)
     shuffle(data_female_text)
+
     # Split out training dataset
     len_data = 0
     len_data = min(int(len(data_male_text)), int(len(data_female_text)))
@@ -73,182 +81,116 @@ def SplitData():
         testing_data_classification.append(0)
 
     # Save Training Data
-    workbook = xlsxwriter.Workbook('data/train_data.xlsx') 
-    worksheet = workbook.add_worksheet()
-    row = 0
-    col = 0
-
-    worksheet.write(row, col, 'Classification')
-    worksheet.write(row, col + 1, 'Text')
-    worksheet.write(row, col + 2, 'Length')
-    worksheet.write(row, col + 3, 'F-Measure')
-    worksheet.write(row, col + 4, 'GPF1')
-    worksheet.write(row, col + 5, 'GPF2')
-    worksheet.write(row, col + 6, 'GPF3')
-    worksheet.write(row, col + 7, 'GPF4')
-    worksheet.write(row, col + 8, 'GPF5')
-    worksheet.write(row, col + 9, 'GPF6')
-    worksheet.write(row, col + 10, 'GPF7')
-    worksheet.write(row, col + 11, 'GPF8')
-    worksheet.write(row, col + 12, 'GPF9')
-    worksheet.write(row, col + 13, 'GPF10')
-    worksheet.write(row, col + 14, 'FA1')
-    worksheet.write(row, col + 15, 'FA2')
-    worksheet.write(row, col + 16, 'FA3')
-    worksheet.write(row, col + 17, 'FA4')
-    worksheet.write(row, col + 18, 'FA5')
-    worksheet.write(row, col + 19, 'FA6')
-    worksheet.write(row, col + 20, 'FA7')
-    worksheet.write(row, col + 21, 'FA8')
-    worksheet.write(row, col + 22, 'FA9')
-    worksheet.write(row, col + 23, 'FA10')
-    worksheet.write(row, col + 24, 'FA11')
-    worksheet.write(row, col + 25, 'FA12')
-    worksheet.write(row, col + 26, 'FA13')
-    worksheet.write(row, col + 27, 'FA14')
-    worksheet.write(row, col + 28, 'FA15')
-    worksheet.write(row, col + 29, 'FA16')
-    worksheet.write(row, col + 30, 'FA17')
-    worksheet.write(row, col + 31, 'FA18')
-    worksheet.write(row, col + 32, 'FA19')
-    worksheet.write(row, col + 33, 'FA20')
-    worksheet.write(row, col + 34, 'FA21')
-    worksheet.write(row, col + 35, 'FA22')
-    worksheet.write(row, col + 36, 'FA23')
-    row += 1
-    for i in range(len(training_data_text)):
-        text = training_data_text[i]
-        gpf = GetGenderPreferentialFeatures(text)
-        fa = GetFactorAnalysis(text)
-        worksheet.write(row, col, training_data_classification[i])
-        worksheet.write(row, col + 1, text)
-        worksheet.write(row, col + 2, len(text))
-        worksheet.write(row, col + 3, GetFMeasure(text))
-        worksheet.write(row, col + 4, gpf[0])
-        worksheet.write(row, col + 5, gpf[1])
-        worksheet.write(row, col + 6, gpf[2])
-        worksheet.write(row, col + 7, gpf[3])
-        worksheet.write(row, col + 8, gpf[4])
-        worksheet.write(row, col + 9, gpf[5])
-        worksheet.write(row, col + 10, gpf[6])
-        worksheet.write(row, col + 11, gpf[7])
-        worksheet.write(row, col + 12, gpf[8])
-        worksheet.write(row, col + 13, gpf[9])
-        worksheet.write(row, col + 14, fa[0])
-        worksheet.write(row, col + 15, fa[1])
-        worksheet.write(row, col + 16, fa[2])
-        worksheet.write(row, col + 17, fa[3])
-        worksheet.write(row, col + 18, fa[4])
-        worksheet.write(row, col + 19, fa[5])
-        worksheet.write(row, col + 20, fa[6])
-        worksheet.write(row, col + 21, fa[7])
-        worksheet.write(row, col + 22, fa[8])
-        worksheet.write(row, col + 23, fa[9])
-        worksheet.write(row, col + 24, fa[10])
-        worksheet.write(row, col + 25, fa[11])
-        worksheet.write(row, col + 26, fa[12])
-        worksheet.write(row, col + 27, fa[13])
-        worksheet.write(row, col + 28, fa[14])
-        worksheet.write(row, col + 29, fa[15])
-        worksheet.write(row, col + 30, fa[16])
-        worksheet.write(row, col + 31, fa[17])
-        worksheet.write(row, col + 32, fa[18])
-        worksheet.write(row, col + 33, fa[19])
-        worksheet.write(row, col + 34, fa[20])
-        worksheet.write(row, col + 35, fa[21])
-        worksheet.write(row, col + 36, fa[22])
-        row += 1
-    workbook.close()
+    WriteToExcel('data/train_data.xlsx', training_data_text, training_data_classification)
 
     # Save Testing Data
-    workbook = xlsxwriter.Workbook('data/test_data.xlsx') 
+    WriteToExcel('data/test_data.xlsx', testing_data_text, testing_data_classification)
+    ###############################################
+    print("Completed")
+
+def WriteToExcel(path, data_text, data_classification):
+    workbook = xlsxwriter.Workbook(path) 
     worksheet = workbook.add_worksheet()
     row = 0
     col = 0
-
-    worksheet.write(row, col, 'Classification')
-    worksheet.write(row, col + 1, 'Text')
-    worksheet.write(row, col + 2, 'Length')
-    worksheet.write(row, col + 3, 'F-Measure')
-    worksheet.write(row, col + 4, 'GPF1')
-    worksheet.write(row, col + 5, 'GPF2')
-    worksheet.write(row, col + 6, 'GPF3')
-    worksheet.write(row, col + 7, 'GPF4')
-    worksheet.write(row, col + 8, 'GPF5')
-    worksheet.write(row, col + 9, 'GPF6')
-    worksheet.write(row, col + 10, 'GPF7')
-    worksheet.write(row, col + 11, 'GPF8')
-    worksheet.write(row, col + 12, 'GPF9')
-    worksheet.write(row, col + 13, 'GPF10')
-    worksheet.write(row, col + 14, 'FA1')
-    worksheet.write(row, col + 15, 'FA2')
-    worksheet.write(row, col + 16, 'FA3')
-    worksheet.write(row, col + 17, 'FA4')
-    worksheet.write(row, col + 18, 'FA5')
-    worksheet.write(row, col + 19, 'FA6')
-    worksheet.write(row, col + 20, 'FA7')
-    worksheet.write(row, col + 21, 'FA8')
-    worksheet.write(row, col + 22, 'FA9')
-    worksheet.write(row, col + 23, 'FA10')
-    worksheet.write(row, col + 24, 'FA11')
-    worksheet.write(row, col + 25, 'FA12')
-    worksheet.write(row, col + 26, 'FA13')
-    worksheet.write(row, col + 27, 'FA14')
-    worksheet.write(row, col + 28, 'FA15')
-    worksheet.write(row, col + 29, 'FA16')
-    worksheet.write(row, col + 30, 'FA17')
-    worksheet.write(row, col + 31, 'FA18')
-    worksheet.write(row, col + 32, 'FA19')
-    worksheet.write(row, col + 33, 'FA20')
-    worksheet.write(row, col + 34, 'FA21')
-    worksheet.write(row, col + 35, 'FA22')
-    worksheet.write(row, col + 36, 'FA23')
+    worksheet.write(row, col, 'Classification'); col += 1;
+    worksheet.write(row, col, 'Text'); col += 1;
+    worksheet.write(row, col, 'POS'); col += 1;
+    worksheet.write(row, col, 'Length'); col += 1;
+    worksheet.write(row, col, 'F-Measure'); col += 1;
+    worksheet.write(row, col, 'GPF1'); col += 1;
+    worksheet.write(row, col, 'GPF2'); col += 1;
+    worksheet.write(row, col, 'GPF3'); col += 1;
+    worksheet.write(row, col, 'GPF4'); col += 1;
+    worksheet.write(row, col, 'GPF5'); col += 1;
+    worksheet.write(row, col, 'GPF6'); col += 1;
+    worksheet.write(row, col, 'GPF7'); col += 1;
+    worksheet.write(row, col, 'GPF8'); col += 1;
+    worksheet.write(row, col, 'GPF9'); col += 1;
+    worksheet.write(row, col, 'GPF10'); col += 1;
+    worksheet.write(row, col, 'FA1'); col += 1;
+    worksheet.write(row, col, 'FA2'); col += 1;
+    worksheet.write(row, col, 'FA3'); col += 1;
+    worksheet.write(row, col, 'FA4'); col += 1;
+    worksheet.write(row, col, 'FA5'); col += 1;
+    worksheet.write(row, col, 'FA6'); col += 1;
+    worksheet.write(row, col, 'FA7'); col += 1;
+    worksheet.write(row, col, 'FA8'); col += 1;
+    worksheet.write(row, col, 'FA9'); col += 1;
+    worksheet.write(row, col, 'FA10'); col += 1;
+    worksheet.write(row, col, 'FA11'); col += 1;
+    worksheet.write(row, col, 'FA12'); col += 1;
+    worksheet.write(row, col, 'FA13'); col += 1;
+    worksheet.write(row, col, 'FA14'); col += 1;
+    worksheet.write(row, col, 'FA15'); col += 1;
+    worksheet.write(row, col, 'FA16'); col += 1;
+    worksheet.write(row, col, 'FA17'); col += 1;
+    worksheet.write(row, col, 'FA18'); col += 1;
+    worksheet.write(row, col, 'FA19'); col += 1;
+    worksheet.write(row, col, 'FA20'); col += 1;
+    worksheet.write(row, col, 'FA21'); col += 1;
+    worksheet.write(row, col, 'FA22'); col += 1;
+    worksheet.write(row, col, 'FA23'); col += 1;
     row += 1
-    for i in range(len(testing_data_text)):
-        text = testing_data_text[i]
+    for i in range(len(data_text)):
+        col = 0
+
+        text = data_text[i]
+        pos = GetPOS(text)
         gpf = GetGenderPreferentialFeatures(text)
         fa = GetFactorAnalysis(text)
-        worksheet.write(row, col, testing_data_classification[i])
-        worksheet.write(row, col + 1, text)
-        worksheet.write(row, col + 2, len(text))
-        worksheet.write(row, col + 3, GetFMeasure(text))
-        worksheet.write(row, col + 4, gpf[0])
-        worksheet.write(row, col + 5, gpf[1])
-        worksheet.write(row, col + 6, gpf[2])
-        worksheet.write(row, col + 7, gpf[3])
-        worksheet.write(row, col + 8, gpf[4])
-        worksheet.write(row, col + 9, gpf[5])
-        worksheet.write(row, col + 10, gpf[6])
-        worksheet.write(row, col + 11, gpf[7])
-        worksheet.write(row, col + 12, gpf[8])
-        worksheet.write(row, col + 13, gpf[9])
-        worksheet.write(row, col + 14, fa[0])
-        worksheet.write(row, col + 15, fa[1])
-        worksheet.write(row, col + 16, fa[2])
-        worksheet.write(row, col + 17, fa[3])
-        worksheet.write(row, col + 18, fa[4])
-        worksheet.write(row, col + 19, fa[5])
-        worksheet.write(row, col + 20, fa[6])
-        worksheet.write(row, col + 21, fa[7])
-        worksheet.write(row, col + 22, fa[8])
-        worksheet.write(row, col + 23, fa[9])
-        worksheet.write(row, col + 24, fa[10])
-        worksheet.write(row, col + 25, fa[11])
-        worksheet.write(row, col + 26, fa[12])
-        worksheet.write(row, col + 27, fa[13])
-        worksheet.write(row, col + 28, fa[14])
-        worksheet.write(row, col + 29, fa[15])
-        worksheet.write(row, col + 30, fa[16])
-        worksheet.write(row, col + 31, fa[17])
-        worksheet.write(row, col + 32, fa[18])
-        worksheet.write(row, col + 33, fa[19])
-        worksheet.write(row, col + 34, fa[20])
-        worksheet.write(row, col + 35, fa[21])
-        worksheet.write(row, col + 36, fa[22])
+        worksheet.write(row, col, data_classification[i]); col += 1;
+        worksheet.write(row, col, text); col += 1;
+        worksheet.write(row, col, pos); col += 1;
+        worksheet.write(row, col, len(text)); col += 1;
+        worksheet.write(row, col, GetFMeasure(text)); col += 1;
+        worksheet.write(row, col, gpf[0]); col += 1;
+        worksheet.write(row, col, gpf[1]); col += 1;
+        worksheet.write(row, col, gpf[2]); col += 1;
+        worksheet.write(row, col, gpf[3]); col += 1;
+        worksheet.write(row, col, gpf[4]); col += 1;
+        worksheet.write(row, col, gpf[5]); col += 1;
+        worksheet.write(row, col, gpf[6]); col += 1;
+        worksheet.write(row, col, gpf[7]); col += 1;
+        worksheet.write(row, col, gpf[8]); col += 1;
+        worksheet.write(row, col, gpf[9]); col += 1;
+        worksheet.write(row, col, fa[0]); col += 1;
+        worksheet.write(row, col, fa[1]); col += 1;
+        worksheet.write(row, col, fa[2]); col += 1;
+        worksheet.write(row, col, fa[3]); col += 1;
+        worksheet.write(row, col, fa[4]); col += 1;
+        worksheet.write(row, col, fa[5]); col += 1;
+        worksheet.write(row, col, fa[6]); col += 1;
+        worksheet.write(row, col, fa[7]); col += 1;
+        worksheet.write(row, col, fa[8]); col += 1;
+        worksheet.write(row, col, fa[9]); col += 1;
+        worksheet.write(row, col, fa[10]); col += 1;
+        worksheet.write(row, col, fa[11]); col += 1;
+        worksheet.write(row, col, fa[12]); col += 1;
+        worksheet.write(row, col, fa[13]); col += 1;
+        worksheet.write(row, col, fa[14]); col += 1;
+        worksheet.write(row, col, fa[15]); col += 1;
+        worksheet.write(row, col, fa[16]); col += 1;
+        worksheet.write(row, col, fa[17]); col += 1;
+        worksheet.write(row, col, fa[18]); col += 1;
+        worksheet.write(row, col, fa[19]); col += 1;
+        worksheet.write(row, col, fa[20]); col += 1;
+        worksheet.write(row, col, fa[21]); col += 1;
+        worksheet.write(row, col, fa[22]); col += 1;
         row += 1
     workbook.close()
-    ###############################################
-    print("Done")
+
+def GetPOS(text):
+    tokens = nltk.word_tokenize(text)
+    tagged = nltk.pos_tag(tokens)
+    pos_text = []
+
+    for (a,b) in tagged:
+        #pos_text.append('%s_%s' % (a, b))
+        #pos_text.append('%s' % (a))
+        pos_text.append('%s' % (b))
+
+    return ' '.join(pos_text)
 
 def GetFMeasure(text):
     tokens = nltk.word_tokenize(text)
@@ -319,8 +261,7 @@ def GetGenderPreferentialFeatures(text):
         elif word.endswith(('ous')):
             f[8] += 1
         if word in ['sorry', 'penitent', 'contrite', 'repentant', 'remorseful', 'regretful', 'compunctious', 'touched', 'melted', 'sorrowful', 'apologetic', 'softened'
-                      'inadequate', 'poor', 'paltry', 'trifling', 'cheap', 'mean', 'shabby', 'scrubby', 'stunted', 'unimportant', 'beggarly', 'insignificant', 'dismal', 'pitiful', 'worthless', 
-                      'despicable', 'sad', 'greived', 'mournful', 'melancholy']:
+                      'sad', 'greived', 'mournful']:
             f[9] += 1
     return f
 
@@ -405,4 +346,5 @@ def GetFactorAnalysis(text):
                 f[i] += 1
     return f
 
-SplitData()
+if __name__ == '__main__':
+    SplitData()

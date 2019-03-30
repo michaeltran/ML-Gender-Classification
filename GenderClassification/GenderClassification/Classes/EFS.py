@@ -6,6 +6,13 @@ from sklearn.model_selection import cross_val_score
 
 class EFS(object):
     def GetContingencyTable(self, X, Y, feature):
+        #   1 0
+        # 1 w x
+        # 0 y z
+
+        # X_When_Y_1 = Values of X when Y = 1
+        # temp = indexes when feature > 0
+
         X_When_Y_1 = np.extract(Y, X[:,feature])
         temp = np.where(X_When_Y_1 > 0)
         w = float(temp[0].size)
@@ -29,13 +36,13 @@ class EFS(object):
         P_c = C / N
         P_c_ = 1 - P_c
 
+        IG_c = P_c * np.log2(P_c) + P_c_ * np.log2(P_c_)
+
         for i in range(X.shape[1]):
             w, x, y, z = self.GetContingencyTable(X, Y, i)
 
             P_f = (w + x) / N
             P_f_ = 1 - P_f
-
-            IG_c = P_c * np.log2(P_c) + P_c_ * np.log2(P_c_)
 
             IG_f_1 = 0
             IG_f_2 = 0
@@ -162,7 +169,7 @@ class EFS(object):
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
 
         t = len(Xi)                     # number of feature scoring algorithms
-        if X.shape[1] > 100:
+        if X.shape[1] > 1000:
             w = int(X.shape[1]/100)     # window size
             tau_i = int(X.shape[1]/20)  # tau
             step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)

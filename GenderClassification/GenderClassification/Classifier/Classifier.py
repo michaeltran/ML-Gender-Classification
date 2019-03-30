@@ -1,4 +1,8 @@
 import numpy as np
+from sklearn import model_selection
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import KBinsDiscretizer
+from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -9,11 +13,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn import model_selection
 from sklearn.metrics import confusion_matrix
-from sklearn.preprocessing import FunctionTransformer
-from sklearn.preprocessing import KBinsDiscretizer
 
 from sklearn.feature_selection import mutual_info_classif
 
@@ -27,7 +27,9 @@ class Classifier(object):
     def GetVectorizer(self, vectorizer_type):
         vectorizer = None
         if vectorizer_type == 'count':
-            vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1))
+            vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
+            #vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), tokenizer=lambda x: x.split('||'), lowercase=False)
+            #vectorizer = CountVectorizer(analyzer='word', binary=True, ngram_range=(1, 1))
         elif vectorizer_type == 'tfidf':
             vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 1))
         elif vectorizer_type == 'hash':
@@ -42,6 +44,7 @@ class Classifier(object):
             classifier = MultinomialNB()
         elif classifier_type == 'svm':
             classifier = SVC(kernel='linear')
+            #classifier = LinearSVC()
         elif classifier_type == 'dt':
             classifier = DecisionTreeClassifier()
         elif classifier_type == 'rf':
@@ -52,8 +55,9 @@ class Classifier(object):
             print('Unknown Classifier: %s' % (classifier_type))
         return classifier
 
-    def GetFeatures(self, training_data_text, training_data_classification, vectorizer_type):
-        vectorizer = self.GetVectorizer(vectorizer_type)
+    def GetFeatures(self, training_data_dict, training_data_classification, vectorizer_type, vocab):
+        #vectorizer = self.GetVectorizer(vectorizer_type)
+        vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
 
         vectorizer_pipeline = Pipeline([
             ('features', FeatureUnion([
@@ -61,37 +65,27 @@ class Classifier(object):
                     ('selector', ItemSelector(key='text')),
                     ('vectorizer', vectorizer),
                 ])),
-                #('length', Pipeline([
-                #    ('selector', ItemSelector(key='length')),
-                #    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
-                #])),
-                #('fmeasure', Pipeline([
-                #    ('selector', ItemSelector(key='fmeasure')),
-                #    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
-                #])),
-                #('gpf', Pipeline([
-                #    ('selector', ItemSelector(key='gpf')),
-                #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                #])),
             ]))
         ])
 
-        X = vectorizer_pipeline.fit_transform(training_data_text, training_data_classification)
+        X = vectorizer_pipeline.fit_transform(training_data_dict, training_data_classification)
         candidate_feature_indexes = efs_obj.EFS(X.toarray(), training_data_classification)
 
         return candidate_feature_indexes
 
-    def BuildClassifier(self, training_data_text, training_data_classification, vectorizer_type, classifier_type, features):
+    def BuildClassifier(self, training_data_dict, training_data_classification, vectorizer_type, classifier_type, features, vocab):
         vectorizer = None
         reducer = None
         classifier = None
 
         ## Build and Train Model ######################
-        vectorizer = self.GetVectorizer(vectorizer_type)
-
+        #vectorizer = self.GetVectorizer(vectorizer_type)
         reducer = ColumnExtractor(cols=features)
-
         classifier = self.GetClassifier(classifier_type)
+        vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
+        #print(vectorizer.get_feature_names())
+
+
 
         text_clf = Pipeline([
             ('features', FeatureUnion([
@@ -103,6 +97,7 @@ class Classifier(object):
                 ('length', Pipeline([
                     ('selector', ItemSelector(key='length')),
                     ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ('discretize', KBinsDiscretizer(n_bins = 100, encode='ordinal', strategy='uniform')),
                     ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
                 ])),
                 ('fmeasure', Pipeline([
@@ -120,16 +115,19 @@ class Classifier(object):
                     ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
                 ])),
             ])),
-            ('clf', classifier)
+            ('clf', classifier),
         ])
 
-        text_clf.fit(training_data_text, training_data_classification)
+        text_clf.fit(training_data_dict, training_data_classification)
         ###############################################
 
-        feats = text_clf.named_steps['features']
-        test = feats.transform(training_data_text)
-        print(test[0])
-        print(test[1])
+        #feats = text_clf.named_steps['features']
+        #test = feats.transform(training_data_dict)
+        #print('Training Vect Examples')
+        #for (count, feature) in zip(test[0].toarray()[0], vectorizer.get_feature_names()):
+        #    print(str(count) + ' ' + feature)
+        #print(zip(test[0], vectorizer.get_feature_names()))
+        #print(test[1])
 
         return text_clf
 
