@@ -1,0 +1,455 @@
+import nltk
+import argparse
+import pandas as pd
+import numpy as np
+from functools import reduce
+
+from collections import Counter
+
+def posNgrams(s, n):
+    '''Calculate POS n-grams and return a dictionary'''
+    text = nltk.word_tokenize(s)
+    text_tags = nltk.pos_tag(text)
+    taglist = []
+    output = {}
+    for item in text_tags:
+        taglist.append(item[1])
+    for i in range(len(taglist)-n+1):
+        g = ' '.join(taglist[i:i+n])
+        output.setdefault(g, 0)
+        output[g] += 1
+    return output
+
+# test = posNgrams("it is sunny. it is sunny. it is sunny. out today", 3)
+# print(test)
+# print("\n")
+# test2 = posNgrams("it is sunny. it is sunny. it is sunny. out today", 2)
+# print(test2)
+#
+parser = argparse.ArgumentParser()
+parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
+opts = parser.parse_args()
+names = ['Text', 'Classification']
+df = pd.read_excel(opts.data, header=None, names=names, usecols="A,B")
+
+training_data_text = []
+training_data_classification = []
+for eachWord in range(len(df['Text'])):
+    text = df['Text'][eachWord]
+    classification = df['Classification'][eachWord]
+    training_data_text.append(str(text))
+    training_data_classification.append(classification)
+
+
+def proposedPOSSequencePatternFeatures(training_data_text, minsup, minadherence):
+    """
+    Corpus D = {d | d is a document containing a sequence of POS tags},
+    Tagset T = {t | t is a POS tag}
+    """
+    D = []
+    for eachRow in training_data_text:
+        d = []
+        t = nltk.word_tokenize(eachRow)
+        convertedTags = nltk.pos_tag(t)
+        for eachWord in convertedTags:
+            d.append(eachWord[1])  # get POS tag
+        D.append(d)
+    # print(D)
+
+    """
+    C1 ← count each t(∈T)in D;
+    """
+    C1 = []
+    count = dict()
+    for eachList in D:
+        tempList = []
+        for tag in eachList:
+            if tag not in tempList:
+                tempList.append(tag)
+        for eachTag in tempList:
+            count[eachTag] = count.get(eachTag, 0) + 1
+    C1.append(count)
+    # print(C1)
+
+    # print("\n")
+    """
+    F1←{f|fεC1 ,f.count/n ≥ minsup}; //n=|D|
+    SP1 ← F1;
+    """
+    F1 = []
+    SP = []
+    F_k = []
+    n = len(D)
+    for key in count:
+        if count[key] / n >= minsup:
+            F1.append(key)
+            F_k.append(key)
+    SP.append(F1)
+
+
+    for k in range(2, 8):
+        C_k = []
+        SP_k = []
+        C_k_count = []
+        C_k.append(candidateGen(F_k))  # C2 Fk-1
+        # print(C_k)
+        F_k.clear()
+        for i in range(len(C_k[0])):
+            C_k_count.append(0)
+        for d in D:
+            C_k_count_index = 0
+            for c in C_k[0]:
+                for index in range(1, len(d) - 1):
+                    x = []
+                    for j in range(k):
+                        x.append(d[index - j])
+                    if x == c:
+                        C_k_count[C_k_count_index] += 1
+                        break
+                C_k_count_index += 1
+        for i in range(len(C_k_count)):
+            if C_k_count[i] >= minsup:
+                F_k.append(C_k[0][i])
+        for i in range(len(F_k)):
+            if fairSCP(D, F_k[i]) >= minadherence:
+                SP_k.append(F_k[i])
+        # print(SP_k)
+        # print('\n')
+        C_k_count.clear()
+        C_k.clear()
+        SP.append(SP_k)
+    total = 0
+    for l in SP:
+        m = len(l)
+        total += m
+    print(total)
+
+
+
+    """
+    for (k = 2; k ≤ MAX-length; k++)
+        Ck = candidate-gen(Fk-1); 
+        for each document d ε D
+            for each candidate POS sequence c ε Ck 
+                if (c is contained in d)
+                    c.count++; 
+            endfor
+        endfor
+        Fk ←{cεCk |c.count/n ≥ minsup};
+        SPk ← {f ε Fk | fairSCP(f) ≥ minadherence}
+    endfor returnSP←USPk ;
+    """
+    # candidateGen(F)
+
+
+def candidateGen(F):
+    """
+        Ck←∅;
+        for each POS n-gram c ε Fk-1
+            for each t ε T
+                c′ ← addsuffix(c, t);
+                add c′ to Ck ;
+            endfor
+        endfor
+        """
+    T = ['CC', 'CD', 'DT', 'EX', 'FW', 'IN', 'JJ', 'JJR', 'JJS', 'LS', 'MD', 'NN', 'NNS',
+         'NNP', 'NNPS', 'PDT', 'POS', 'PRP', 'PRP$', 'RB', 'RBR', 'RBS','RP', 'SYM', 'TO',
+         'UH', 'VB', 'VBD', 'VBG', 'VBN', 'VBP', 'VBZ', 'WDT', 'WP', 'WP$', 'WRB', '$', "'",
+         '(', ')', ',', '-', '.', ':', "''", '``']
+
+    a = []
+    for each_c in F:
+        # print(each_c)
+        if type(each_c) != list:
+            for t in T:
+                x = []
+                x.append(each_c)
+                x.append(t)
+                a.append(x)
+        if type(each_c) == list:
+            for t in T:
+                x = []
+                for item in each_c:
+                    x.append(item)
+                x.append(t)
+                a.append(x)
+    # print(a)
+    return a
+
+def fairSCP(D, f):
+    if len(f) == 2:
+        count_2 = dict()
+        top_2 = 0
+        for d in D:
+            for tag in f:
+                if tag in d:
+                    count_2[tag] = count_2.get(tag, 0) + 1
+            if all(tag in d for tag in f):
+                top_2 += 1
+        top_probability_2 = np.power(top_2 / len(D), 2)
+        bottom_list_1 = []
+        bottom = 1
+        for eachTag in count_2:
+            bottom_list_1.append(count_2[eachTag]/len(D))
+        for i in bottom_list_1:
+            bottom = bottom * i
+        result = top_probability_2/bottom
+        # print(result)
+        return result
+
+    if len(f) == 3:
+        # count probability of top
+        top_3 = 0
+        for d in D:
+            if all(tag in d for tag in f):
+                top_3 += 1
+        top_probability_3 = np.power(top_3 / len(D), 2)
+
+        # get each tag probability
+        count_3 = []
+        for tag in f:
+            count_tag = 0
+            for d in D:
+                if tag in d:
+                    count_tag += 1
+            count_3.append(count_tag/len(D))
+
+        # count bottom probability
+        first_part = 0  # P(x2x3)
+        second_part = 0  # P(x1x2)
+        for d in D:
+            if all(tag_1 in d for tag_1 in f[1:]):
+                first_part += 1
+            if all(tag_2 in d for tag_2 in f[:2]):
+                second_part += 1
+        first_part = first_part/len(D)
+        second_part = second_part/len(D)
+
+        X1 = count_3[0]
+        X3 = count_3[2]
+        result = top_probability_3 / (1/2 *(X1 * first_part)+(second_part * X3))
+        return result
+
+    if len(f) == 4:
+        # count probability of top
+        top_4 = 0
+        for d in D:
+            if all(tag in d for tag in f):
+                top_4 += 1
+        top_probability_4 = np.power(top_4 / len(D), 2)
+
+        # get each tag probability
+        count_4 = []
+        for tag in f:
+            count_tag = 0
+            for d in D:
+                if tag in d:
+                    count_tag += 1
+            count_4.append(count_tag / len(D))
+
+        # count bottom probability
+        x2_x3_x4 = 0
+        x1_x2 = 0
+        x3_x4 = 0
+        x1_x2_x3 = 0
+        for d in D:
+            if all(tag_1 in d for tag_1 in f[1:]):
+                x2_x3_x4 += 1
+            if all(tag_2 in d for tag_2 in f[:2]):
+                x1_x2 += 1
+            if all(tag_3 in d for tag_3 in f[2:]):
+                x3_x4 += 1
+            if all(tag_4 in d for tag_4 in f[:3]):
+                x1_x2_x3 += 1
+        x2_x3_x4 = x2_x3_x4/len(D)
+        x1_x2 = x1_x2/len(D)
+        x3_x4 = x3_x4/len(D)
+        x1_x2_x3 = x1_x2_x3/len(D)
+
+        result = top_probability_4 / (1/3 * ((count_4[0]*x2_x3_x4) + (x1_x2 * x3_x4) + (x1_x2_x3 * count_4[3])))
+
+        return result
+
+    if len(f) == 5:
+        # count probability of top
+        top_5 = 0
+        for d in D:
+            if all(tag in d for tag in f):
+                top_5 += 1
+        top_probability_5 = np.power(top_5 / len(D), 2)
+
+        # get each tag probability
+        count_5 = []
+        for tag in f:
+            count_tag = 0
+            for d in D:
+                if tag in d:
+                    count_tag += 1
+            count_5.append(count_tag / len(D))
+
+        # count bottom probability
+        x2_x3_x4_x5 = 0
+        x1_x2 = 0
+        x3_x4_x5 = 0
+        x1_x2_x3 = 0
+        x4_x5 = 0
+        x1_x2_x3_x4 = 0
+        for d in D:
+            if all(tag_1 in d for tag_1 in f[1:]):
+                x2_x3_x4_x5 += 1
+            if all(tag_2 in d for tag_2 in f[:2]):
+                x1_x2 += 1
+            if all(tag_3 in d for tag_3 in f[2:]):
+                x3_x4_x5 += 1
+            if all(tag_4 in d for tag_4 in f[:3]):
+                x1_x2_x3 += 1
+            if all(tag_5 in d for tag_5 in f[3:]):
+                x4_x5 += 1
+            if all(tag_6 in d for tag_6 in f[:4]):
+                x1_x2_x3_x4 += 1
+        x2_x3_x4_x5 = x2_x3_x4_x5/len(D)
+        x1_x2 = x1_x2/len(D)
+        x3_x4_x5 = x3_x4_x5/len(D)
+        x1_x2_x3 = x1_x2_x3/len(D)
+        x4_x5 = x4_x5/len(D)
+        x1_x2_x3_x4 = x1_x2_x3_x4/len(D)
+
+        bottom_5 = 1/3 * ((count_5[0] * x2_x3_x4_x5) + (x1_x2 * x3_x4_x5) + (x1_x2_x3 * x4_x5) + (x1_x2_x3_x4 * count_5[4]))
+        result = top_probability_5/bottom_5
+        return result
+
+    if len(f) == 6:
+        # count probability of top
+        top_6 = 0
+        for d in D:
+            if all(tag in d for tag in f):
+                top_6 += 1
+        top_probability_6= np.power(top_6 / len(D), 2)
+
+        # get each tag probability
+        count_6 = []
+        for tag in f:
+            count_tag = 0
+            for d in D:
+                if tag in d:
+                    count_tag += 1
+            count_6.append(count_tag / len(D))
+
+        # count bottom probability
+        x2_x3_x4_x5_x6 = 0
+        x1_x2 = 0
+        x3_x4_x5_x6 = 0
+        x1_x2_x3 = 0
+        x4_x5_x6 = 0
+        x1_x2_x3_x4 = 0
+        x5_x6 = 0
+        x1_x2_x3_x4_x5 = 0
+        for d in D:
+            if all(tag_1 in d for tag_1 in f[1:]):
+                x2_x3_x4_x5_x6 += 1
+            if all(tag_2 in d for tag_2 in f[:2]):
+                x1_x2 += 1
+            if all(tag_3 in d for tag_3 in f[2:]):
+                x3_x4_x5_x6 += 1
+            if all(tag_4 in d for tag_4 in f[:3]):
+                x1_x2_x3 += 1
+            if all(tag_5 in d for tag_5 in f[3:]):
+                x4_x5_x6 += 1
+            if all(tag_6 in d for tag_6 in f[:4]):
+                x1_x2_x3_x4 += 1
+            if all(tag_7 in d for tag_7 in f[4:]):
+                x5_x6 += 1
+            if all(tag_8 in d for tag_8 in f[:5]):
+                x1_x2_x3_x4_x5 += 1
+        x2_x3_x4_x5_x6 = x2_x3_x4_x5_x6/len(D)
+        x1_x2 = x1_x2/len(D)
+        x3_x4_x5_x6 = x3_x4_x5_x6/len(D)
+        x1_x2_x3 = x1_x2_x3/len(D)
+        x4_x5_x6 = x4_x5_x6/len(D)
+        x1_x2_x3_x4 = x1_x2_x3_x4/len(D)
+        x5_x6 = x5_x6/len(D)
+        x1_x2_x3_x4_x5 = x1_x2_x3_x4_x5/len(D)
+
+        bottom_6 = 1/5 * ((count_6[0] * x2_x3_x4_x5_x6) + (x1_x2 * x3_x4_x5_x6) + (x1_x2_x3 * x4_x5_x6) +
+                          (x1_x2_x3_x4 * x5_x6) + (x1_x2_x3_x4_x5 * count_6[5]))
+        result = top_probability_6 / bottom_6
+
+        return result
+
+    if len(f) == 7:
+        # count probability of top
+        top_7 = 0
+        for d in D:
+            if all(tag in d for tag in f):
+                top_7 += 1
+        top_probability_7 = np.power(top_7 / len(D), 2)
+
+        # get each tag probability
+        count_7 = []
+        for tag in f:
+            count_tag = 0
+            for d in D:
+                if tag in d:
+                    count_tag += 1
+            count_7.append(count_tag / len(D))
+
+        # count bottom probability
+        x2_x3_x4_x5_x6_x7 = 0
+        x1_x2 = 0
+        x3_x4_x5_x6_x7 = 0
+        x1_x2_x3 = 0
+        x4_x5_x6_x7 = 0
+        x1_x2_x3_x4 = 0
+        x5_x6_x7 = 0
+        x1_x2_x3_x4_x5 = 0
+        x6_x7 = 0
+        x1_x2_x3_x4_x5_x6 = 0
+
+        for d in D:
+            if all(tag_1 in d for tag_1 in f[1:]):
+                x2_x3_x4_x5_x6_x7 += 1
+            if all(tag_2 in d for tag_2 in f[:2]):
+                x1_x2 += 1
+            if all(tag_3 in d for tag_3 in f[2:]):
+                x3_x4_x5_x6_x7 += 1
+            if all(tag_4 in d for tag_4 in f[:3]):
+                x1_x2_x3 += 1
+            if all(tag_5 in d for tag_5 in f[3:]):
+                x4_x5_x6_x7 += 1
+            if all(tag_6 in d for tag_6 in f[:4]):
+                x1_x2_x3_x4 += 1
+            if all(tag_7 in d for tag_7 in f[4:]):
+                x5_x6_x7 += 1
+            if all(tag_8 in d for tag_8 in f[:5]):
+                x1_x2_x3_x4_x5 += 1
+            if all(tag_9 in d for tag_9 in f[5:]):
+                x6_x7 += 1
+            if all(tag_10 in d for tag_10 in f[:6]):
+                x1_x2_x3_x4_x5_x6 += 1
+
+        x2_x3_x4_x5_x6_x7 = x2_x3_x4_x5_x6_x7/len(D)
+        x1_x2 = x1_x2/len(D)
+        x3_x4_x5_x6_x7 = x3_x4_x5_x6_x7/len(D)
+        x1_x2_x3 = x1_x2_x3/len(D)
+        x4_x5_x6_x7 = x4_x5_x6_x7/len(D)
+        x1_x2_x3_x4 = x1_x2_x3_x4/len(D)
+        x5_x6_x7 = x5_x6_x7/len(D)
+        x1_x2_x3_x4_x5 = x1_x2_x3_x4_x5/len(D)
+        x6_x7 = x6_x7/len(D)
+        x1_x2_x3_x4_x5_x6 = x1_x2_x3_x4_x5_x6/len(D)
+
+        bottom_7 = 1/6 * ((count_7[0] * x2_x3_x4_x5_x6_x7) + (x1_x2 * x3_x4_x5_x6_x7) + (x1_x2_x3 * x4_x5_x6_x7) +
+                          (x1_x2_x3_x4 * x5_x6_x7) + (x1_x2_x3_x4_x5 * x6_x7) + (x1_x2_x3_x4_x5_x6 * count_7[6]))
+        result = top_probability_7 / bottom_7
+        return result
+
+
+
+
+def getProbabiblity(D, f):
+
+    return 0
+
+
+
+proposedPOSSequencePatternFeatures(training_data_text, 0.3, 0.2)
