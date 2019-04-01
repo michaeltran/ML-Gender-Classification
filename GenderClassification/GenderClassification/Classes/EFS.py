@@ -1,6 +1,8 @@
 import numpy as np
 
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import BernoulliNB
+
 from sklearn.feature_selection import chi2
 from sklearn.model_selection import cross_val_score
 
@@ -12,6 +14,9 @@ class EFS(object):
 
         # X_When_Y_1 = Values of X when Y = 1
         # temp = indexes when feature > 0
+
+        #test = X[:,feature]
+        #testtest = test.toarray()
 
         X_When_Y_1 = np.extract(Y, X[:,feature])
         temp = np.where(X_When_Y_1 > 0)
@@ -103,6 +108,20 @@ class EFS(object):
             MI.append(MI_f)
         return MI
 
+    def ChiSquared(self, X, Y):
+        chi_squared = []
+        C = Y.count(1)
+        C_ = Y.count(0)
+        N = C + C_
+
+        for i in range(X.shape[1]):
+            w, x, y, z = self.GetContingencyTable(X, Y, i)
+
+            chi2_fc = ( N * np.power(((w * z) - (y * x)), 2) ) / ( (w + y) * (x + z) * (w + x) * (y + z) )
+
+            chi_squared.append(chi2_fc)
+        return chi_squared
+
     def CrossEntropy(self, X, Y):
         CE = []
         C = Y.count(1)
@@ -169,7 +188,7 @@ class EFS(object):
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
 
         t = len(Xi)                     # number of feature scoring algorithms
-        if X.shape[1] > 1000:
+        if X.shape[1] > 500:
             w = int(X.shape[1]/100)     # window size
             tau_i = int(X.shape[1]/20)  # tau
             step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
@@ -202,7 +221,7 @@ class EFS(object):
         for i in range(len(OptCandFeatures)):
             candidate_feature_indexes = OptCandFeatures[i]
             candidate_features = X[:,candidate_feature_indexes]
-            cv_scores = cross_val_score(MultinomialNB(), candidate_features, Y, cv=10, scoring='accuracy')
+            cv_scores = cross_val_score(MultinomialNB(), candidate_features, Y, cv=5, scoring='accuracy')
             scores.append(cv_scores.mean())
             print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 

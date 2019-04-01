@@ -12,7 +12,7 @@ def SplitData():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
-    parser.add_argument('-m', '--mine', default=False, help ='')
+    parser.add_argument('-m', '--mine', default=True, help ='')
     opts = parser.parse_args()
     ###############################################
 
@@ -42,18 +42,6 @@ def SplitData():
                 print('Classification Error: %s is not defined.' % (classification))
                 return
 
-    if opts.mine == True:
-        mine_obj = MinePOSPats(data_male_text + data_female_text, 0.3, 0.2)
-        pos_pats = mine_obj.MinePOSPats()
-
-        # Write POS Patterns to Text
-        with open('data/POSPatterns.txt', 'w') as file:
-            patterns = []
-            for pos_pat in pos_pats:
-                pattern = ' '.join(pos_pat)
-                patterns.append(pattern)
-            file.write('||'.join(patterns))
-
     shuffle(data_male_text)
     shuffle(data_female_text)
 
@@ -80,6 +68,19 @@ def SplitData():
         testing_data_text.append(data_female_text[i])
         testing_data_classification.append(0)
 
+    # POS Pattern Mining
+    if opts.mine == True:
+        mine_obj = MinePOSPats(training_data_text, 0.3, 0.2)
+        pos_pats = mine_obj.MinePOSPats()
+
+        # Write POS Patterns to Text
+        with open('data/POSPatterns.txt', 'w') as file:
+            patterns = []
+            for pos_pat in pos_pats:
+                pattern = ' '.join(pos_pat)
+                patterns.append(pattern)
+            file.write('\n'.join(patterns))
+
     # Save Training Data
     WriteToExcel('data/train_data.xlsx', training_data_text, training_data_classification)
 
@@ -89,96 +90,99 @@ def SplitData():
     print("Completed")
 
 def WriteToExcel(path, data_text, data_classification):
-    workbook = xlsxwriter.Workbook(path) 
-    worksheet = workbook.add_worksheet()
-    row = 0
-    col = 0
-    worksheet.write(row, col, 'Classification'); col += 1;
-    worksheet.write(row, col, 'Text'); col += 1;
-    worksheet.write(row, col, 'POS'); col += 1;
-    worksheet.write(row, col, 'Length'); col += 1;
-    worksheet.write(row, col, 'F-Measure'); col += 1;
-    worksheet.write(row, col, 'GPF1'); col += 1;
-    worksheet.write(row, col, 'GPF2'); col += 1;
-    worksheet.write(row, col, 'GPF3'); col += 1;
-    worksheet.write(row, col, 'GPF4'); col += 1;
-    worksheet.write(row, col, 'GPF5'); col += 1;
-    worksheet.write(row, col, 'GPF6'); col += 1;
-    worksheet.write(row, col, 'GPF7'); col += 1;
-    worksheet.write(row, col, 'GPF8'); col += 1;
-    worksheet.write(row, col, 'GPF9'); col += 1;
-    worksheet.write(row, col, 'GPF10'); col += 1;
-    worksheet.write(row, col, 'FA1'); col += 1;
-    worksheet.write(row, col, 'FA2'); col += 1;
-    worksheet.write(row, col, 'FA3'); col += 1;
-    worksheet.write(row, col, 'FA4'); col += 1;
-    worksheet.write(row, col, 'FA5'); col += 1;
-    worksheet.write(row, col, 'FA6'); col += 1;
-    worksheet.write(row, col, 'FA7'); col += 1;
-    worksheet.write(row, col, 'FA8'); col += 1;
-    worksheet.write(row, col, 'FA9'); col += 1;
-    worksheet.write(row, col, 'FA10'); col += 1;
-    worksheet.write(row, col, 'FA11'); col += 1;
-    worksheet.write(row, col, 'FA12'); col += 1;
-    worksheet.write(row, col, 'FA13'); col += 1;
-    worksheet.write(row, col, 'FA14'); col += 1;
-    worksheet.write(row, col, 'FA15'); col += 1;
-    worksheet.write(row, col, 'FA16'); col += 1;
-    worksheet.write(row, col, 'FA17'); col += 1;
-    worksheet.write(row, col, 'FA18'); col += 1;
-    worksheet.write(row, col, 'FA19'); col += 1;
-    worksheet.write(row, col, 'FA20'); col += 1;
-    worksheet.write(row, col, 'FA21'); col += 1;
-    worksheet.write(row, col, 'FA22'); col += 1;
-    worksheet.write(row, col, 'FA23'); col += 1;
-    row += 1
-    for i in range(len(data_text)):
-        col = 0
-
-        text = data_text[i]
-        pos = GetPOS(text)
-        gpf = GetGenderPreferentialFeatures(text)
-        fa = GetFactorAnalysis(text)
-        worksheet.write(row, col, data_classification[i]); col += 1;
-        worksheet.write(row, col, text); col += 1;
-        worksheet.write(row, col, pos); col += 1;
-        worksheet.write(row, col, len(text)); col += 1;
-        worksheet.write(row, col, GetFMeasure(text)); col += 1;
-        worksheet.write(row, col, gpf[0]); col += 1;
-        worksheet.write(row, col, gpf[1]); col += 1;
-        worksheet.write(row, col, gpf[2]); col += 1;
-        worksheet.write(row, col, gpf[3]); col += 1;
-        worksheet.write(row, col, gpf[4]); col += 1;
-        worksheet.write(row, col, gpf[5]); col += 1;
-        worksheet.write(row, col, gpf[6]); col += 1;
-        worksheet.write(row, col, gpf[7]); col += 1;
-        worksheet.write(row, col, gpf[8]); col += 1;
-        worksheet.write(row, col, gpf[9]); col += 1;
-        worksheet.write(row, col, fa[0]); col += 1;
-        worksheet.write(row, col, fa[1]); col += 1;
-        worksheet.write(row, col, fa[2]); col += 1;
-        worksheet.write(row, col, fa[3]); col += 1;
-        worksheet.write(row, col, fa[4]); col += 1;
-        worksheet.write(row, col, fa[5]); col += 1;
-        worksheet.write(row, col, fa[6]); col += 1;
-        worksheet.write(row, col, fa[7]); col += 1;
-        worksheet.write(row, col, fa[8]); col += 1;
-        worksheet.write(row, col, fa[9]); col += 1;
-        worksheet.write(row, col, fa[10]); col += 1;
-        worksheet.write(row, col, fa[11]); col += 1;
-        worksheet.write(row, col, fa[12]); col += 1;
-        worksheet.write(row, col, fa[13]); col += 1;
-        worksheet.write(row, col, fa[14]); col += 1;
-        worksheet.write(row, col, fa[15]); col += 1;
-        worksheet.write(row, col, fa[16]); col += 1;
-        worksheet.write(row, col, fa[17]); col += 1;
-        worksheet.write(row, col, fa[18]); col += 1;
-        worksheet.write(row, col, fa[19]); col += 1;
-        worksheet.write(row, col, fa[20]); col += 1;
-        worksheet.write(row, col, fa[21]); col += 1;
-        worksheet.write(row, col, fa[22]); col += 1;
-        row += 1
-    workbook.close()
+    with xlsxwriter.Workbook(path) as workbook:
+        worksheet = workbook.add_worksheet();
+        row = 0;
+        col = 0;
+        worksheet.write(row, col, 'Classification'); col += 1;
+        worksheet.write(row, col, 'Text'); col += 1;
+        worksheet.write(row, col, 'POS'); col += 1;
+        worksheet.write(row, col, 'TaggedPOS'); col += 1;
+        worksheet.write(row, col, 'WordCount'); col += 1;
+        worksheet.write(row, col, 'Length'); col += 1;
+        worksheet.write(row, col, 'F-Measure'); col += 1;
+        worksheet.write(row, col, 'GPF1'); col += 1;
+        worksheet.write(row, col, 'GPF2'); col += 1;
+        worksheet.write(row, col, 'GPF3'); col += 1;
+        worksheet.write(row, col, 'GPF4'); col += 1;
+        worksheet.write(row, col, 'GPF5'); col += 1;
+        worksheet.write(row, col, 'GPF6'); col += 1;
+        worksheet.write(row, col, 'GPF7'); col += 1;
+        worksheet.write(row, col, 'GPF8'); col += 1;
+        worksheet.write(row, col, 'GPF9'); col += 1;
+        worksheet.write(row, col, 'GPF10'); col += 1;
+        worksheet.write(row, col, 'FA1'); col += 1;
+        worksheet.write(row, col, 'FA2'); col += 1;
+        worksheet.write(row, col, 'FA3'); col += 1;
+        worksheet.write(row, col, 'FA4'); col += 1;
+        worksheet.write(row, col, 'FA5'); col += 1;
+        worksheet.write(row, col, 'FA6'); col += 1;
+        worksheet.write(row, col, 'FA7'); col += 1;
+        worksheet.write(row, col, 'FA8'); col += 1;
+        worksheet.write(row, col, 'FA9'); col += 1;
+        worksheet.write(row, col, 'FA10'); col += 1;
+        worksheet.write(row, col, 'FA11'); col += 1;
+        worksheet.write(row, col, 'FA12'); col += 1;
+        worksheet.write(row, col, 'FA13'); col += 1;
+        worksheet.write(row, col, 'FA14'); col += 1;
+        worksheet.write(row, col, 'FA15'); col += 1;
+        worksheet.write(row, col, 'FA16'); col += 1;
+        worksheet.write(row, col, 'FA17'); col += 1;
+        worksheet.write(row, col, 'FA18'); col += 1;
+        worksheet.write(row, col, 'FA19'); col += 1;
+        worksheet.write(row, col, 'FA20'); col += 1;
+        worksheet.write(row, col, 'FA21'); col += 1;
+        worksheet.write(row, col, 'FA22'); col += 1;
+        worksheet.write(row, col, 'FA23'); col += 1;
+        row += 1;
+        for i in range(len(data_text)):
+            col = 0;
+            text = data_text[i];
+            pos = GetPOS(text);
+            tagged_pos = GetTaggedPOS(text);
+            gpf = GetGenderPreferentialFeatures(text);
+            fa = GetFactorAnalysis(text);
+            worksheet.write(row, col, data_classification[i]); col += 1;
+            worksheet.write(row, col, text); col += 1;
+            worksheet.write(row, col, pos); col += 1;
+            worksheet.write(row, col, tagged_pos); col += 1;
+            worksheet.write(row, col, len(text.split())); col += 1;
+            worksheet.write(row, col, len(text)); col += 1;
+            worksheet.write(row, col, GetFMeasure(text)); col += 1;
+            worksheet.write(row, col, gpf[0]); col += 1;
+            worksheet.write(row, col, gpf[1]); col += 1;
+            worksheet.write(row, col, gpf[2]); col += 1;
+            worksheet.write(row, col, gpf[3]); col += 1;
+            worksheet.write(row, col, gpf[4]); col += 1;
+            worksheet.write(row, col, gpf[5]); col += 1;
+            worksheet.write(row, col, gpf[6]); col += 1;
+            worksheet.write(row, col, gpf[7]); col += 1;
+            worksheet.write(row, col, gpf[8]); col += 1;
+            worksheet.write(row, col, gpf[9]); col += 1;
+            worksheet.write(row, col, fa[0]); col += 1;
+            worksheet.write(row, col, fa[1]); col += 1;
+            worksheet.write(row, col, fa[2]); col += 1;
+            worksheet.write(row, col, fa[3]); col += 1;
+            worksheet.write(row, col, fa[4]); col += 1;
+            worksheet.write(row, col, fa[5]); col += 1;
+            worksheet.write(row, col, fa[6]); col += 1;
+            worksheet.write(row, col, fa[7]); col += 1;
+            worksheet.write(row, col, fa[8]); col += 1;
+            worksheet.write(row, col, fa[9]); col += 1;
+            worksheet.write(row, col, fa[10]); col += 1;
+            worksheet.write(row, col, fa[11]); col += 1;
+            worksheet.write(row, col, fa[12]); col += 1;
+            worksheet.write(row, col, fa[13]); col += 1;
+            worksheet.write(row, col, fa[14]); col += 1;
+            worksheet.write(row, col, fa[15]); col += 1;
+            worksheet.write(row, col, fa[16]); col += 1;
+            worksheet.write(row, col, fa[17]); col += 1;
+            worksheet.write(row, col, fa[18]); col += 1;
+            worksheet.write(row, col, fa[19]); col += 1;
+            worksheet.write(row, col, fa[20]); col += 1;
+            worksheet.write(row, col, fa[21]); col += 1;
+            worksheet.write(row, col, fa[22]); col += 1;
+            row += 1;
 
 def GetPOS(text):
     tokens = nltk.word_tokenize(text)
@@ -186,9 +190,17 @@ def GetPOS(text):
     pos_text = []
 
     for (a,b) in tagged:
-        #pos_text.append('%s_%s' % (a, b))
-        #pos_text.append('%s' % (a))
         pos_text.append('%s' % (b))
+
+    return ' '.join(pos_text)
+
+def GetTaggedPOS(text):
+    tokens = nltk.word_tokenize(text)
+    tagged = nltk.pos_tag(tokens)
+    pos_text = []
+
+    for (a,b) in tagged:
+        pos_text.append('%s_%s' % (a, b))
 
     return ' '.join(pos_text)
 

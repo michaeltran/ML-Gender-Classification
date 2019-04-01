@@ -2,24 +2,32 @@ import numpy as np
 from sklearn import model_selection
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.preprocessing import KBinsDiscretizer
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
+
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.feature_extraction.text import TfidfTransformer
+
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.naive_bayes import BernoulliNB
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
+from sklearn.svm import SVR
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import confusion_matrix
 
+from sklearn.metrics import confusion_matrix
 from sklearn.feature_selection import mutual_info_classif
 
 from Classes.ColumnExtractor import ColumnExtractor
+from Classes.DenseTransformer import DenseTransformer
 from Classes.EFS import EFS
 from Classes.ItemSelector import ItemSelector
+from Classes.ItemSelectorTF import ItemSelectorTF
 
 efs_obj = EFS()
 
@@ -55,13 +63,30 @@ class Classifier(object):
             print('Unknown Classifier: %s' % (classifier_type))
         return classifier
 
-    def GetFeatures(self, training_data_dict, training_data_classification, vectorizer_type, vocab):
+    def GetFeatures(self, training_data_dict, training_data_classification, vocab):
         #vectorizer = self.GetVectorizer(vectorizer_type)
-        vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
+        vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
 
         vectorizer_pipeline = Pipeline([
             ('features', FeatureUnion([
-                ('text', Pipeline([
+                ('pos', Pipeline([
+                    ('selector', ItemSelector(key='pos')),
+                    ('vectorizer', vectorizer),
+                ])),
+            ]))
+        ])
+
+        X = vectorizer_pipeline.fit_transform(training_data_dict, training_data_classification)
+        candidate_feature_indexes = efs_obj.EFS(X.toarray(), training_data_classification)
+
+        return candidate_feature_indexes
+
+    def GetFeatures2(self, training_data_dict, training_data_classification, vocab):
+        vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2))
+
+        vectorizer_pipeline = Pipeline([
+            ('features', FeatureUnion([
+                ('pos', Pipeline([
                     ('selector', ItemSelector(key='text')),
                     ('vectorizer', vectorizer),
                 ])),
@@ -73,50 +98,168 @@ class Classifier(object):
 
         return candidate_feature_indexes
 
-    def BuildClassifier(self, training_data_dict, training_data_classification, vectorizer_type, classifier_type, features, vocab):
-        vectorizer = None
-        reducer = None
-        classifier = None
+    def GetFeatures3(self, training_data_dict, training_data_classification, vectorizer_pipeline):
+        X = vectorizer_pipeline.fit_transform(training_data_dict, training_data_classification)
+        candidate_feature_indexes = efs_obj.EFS(X.toarray(), training_data_classification)
 
+        return candidate_feature_indexes
+
+    ## Multinomial NB
+    # Generally discrete values
+    # Bin values if non-discrete
+    def BuildClassifierNB(self, training_data_dict, training_data_classification, features, vocab):
         ## Build and Train Model ######################
-        #vectorizer = self.GetVectorizer(vectorizer_type)
-        reducer = ColumnExtractor(cols=features)
-        classifier = self.GetClassifier(classifier_type)
-        vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
-        #print(vectorizer.get_feature_names())
+        #vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
+        #vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(3, 3), tokenizer=lambda x: x.split(' '), lowercase=False)
+        #reducer = ColumnExtractor(cols=features)
+        #classifier = MultinomialNB()
 
+        #text_clf = Pipeline([
+        #    ('features', FeatureUnion([
+        #        ('pos', Pipeline([
+        #            ('selector', ItemSelector(key='pos')),
+        #            ('vectorizer', vectorizer1),
+        #            ('reducer', reducer),
+        #        ])),
+        #        ('text', Pipeline([
+        #            ('selector', ItemSelector(key='text')),
+        #            ('vectorizer', vectorizer2),
+        #            #('reducer', reducer),
+        #        ])),
+        #        ('length', Pipeline([
+        #            ('selector', ItemSelector(key='length')),
+        #            ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+        #            ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+        #            ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
+        #        ])),
+        #        ('fmeasure', Pipeline([
+        #            ('selector', ItemSelector(key='fmeasure')),
+        #            ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+        #            ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+        #            ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
+        #        ])),
+        #        ('gpf', Pipeline([
+        #            ('selector', ItemSelector(key='gpf')),
+        #            ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+        #        ])),
+        #        ('fa', Pipeline([
+        #            ('selector', ItemSelector(key='fa')),
+        #            ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+        #        ])),
+        #    ])),
+        #    ('clf', classifier),
+        #])
 
+        if True:
+            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
+            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
-        text_clf = Pipeline([
-            ('features', FeatureUnion([
-                ('text', Pipeline([
-                    ('selector', ItemSelector(key='text')),
-                    ('vectorizer', vectorizer),
-                    ('reducer', reducer),
+            classifier = MultinomialNB()
+
+            features1 = FeatureUnion([
+                    ('pos', Pipeline([
+                        ('selector', ItemSelector(key='pos')),
+                        ('vectorizer', vectorizer1),
+                    ])),
+                    ('text', Pipeline([
+                        ('selector', ItemSelector(key='text')),
+                        ('vectorizer', vectorizer2),
+                    ])),
+                    ('gpf', Pipeline([
+                        ('selector', ItemSelector(key='gpf')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ])),
+                    ('fa', Pipeline([
+                        ('selector', ItemSelector(key='fa')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ])),
+                ])
+
+            features2 = FeatureUnion([
+                    ('wordcount', Pipeline([
+                        ('selector', ItemSelector(key='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                        ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+                    ])),
+                    ('fmeasure', Pipeline([
+                        ('selector', ItemSelector(key='fmeasure')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                        ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+                    ])),
+                ])
+
+            reducer_features = self.GetFeatures3(training_data_dict, training_data_classification, features1)
+            reducer = ColumnExtractor(cols=reducer_features)
+
+            text_clf = Pipeline([
+                ('features', FeatureUnion([
+                    ('pipeline', Pipeline([
+                        ('features', features1),
+                        ('reducer', reducer),
+                    ])),
+                    ('pipeline2', Pipeline([
+                        ('features', features2),
+                        #('scaler', StandardScaler()),
+                    ])),
                 ])),
-                ('length', Pipeline([
-                    ('selector', ItemSelector(key='length')),
-                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
-                    ('discretize', KBinsDiscretizer(n_bins = 100, encode='ordinal', strategy='uniform')),
-                    ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
+                ('clf', classifier),
+            ])
+        else:
+            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
+            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
+
+            classifier = MultinomialNB()
+
+            features1 = FeatureUnion([
+                    ('pos', Pipeline([
+                        ('selector', ItemSelector(key='pos')),
+                        ('vectorizer', vectorizer1),
+                    ])),
+                    ('text', Pipeline([
+                        ('selector', ItemSelector(key='text')),
+                        ('vectorizer', vectorizer2),
+                    ])),
+                    ('gpf', Pipeline([
+                        ('selector', ItemSelector(key='gpf')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tobool', FunctionTransformer(self.GetBoolArray, validate = False)),
+                    ])),
+                    ('fa', Pipeline([
+                        ('selector', ItemSelector(key='fa')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tobool', FunctionTransformer(self.GetBoolArray, validate = False)),
+                    ])),
+                ])
+
+            features2 = FeatureUnion([
+                    ('wordcount', Pipeline([
+                        ('selector', ItemSelector(key='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                        ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+                    ])),
+                    ('fmeasure', Pipeline([
+                        ('selector', ItemSelector(key='fmeasure')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                        ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
+                    ])),
+                ])
+
+            reducer_features = self.GetFeatures3(training_data_dict, training_data_classification, features1)
+            reducer = ColumnExtractor(cols=reducer_features)
+
+            text_clf = Pipeline([
+                ('features', FeatureUnion([
+                    ('pipeline', Pipeline([
+                        ('features', features1),
+                        ('reducer', reducer),
+                    ])),
+                    ('pipeline2', Pipeline([
+                        ('features', features2),
+                        #('scaler', StandardScaler()),
+                    ])),
                 ])),
-                ('fmeasure', Pipeline([
-                    ('selector', ItemSelector(key='fmeasure')),
-                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
-                    ('discretize', KBinsDiscretizer(n_bins = 10, encode='ordinal', strategy='uniform')),
-                    ('toint', FunctionTransformer(self.GetIntArray, validate = False)),
-                ])),
-                ('gpf', Pipeline([
-                    ('selector', ItemSelector(key='gpf')),
-                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                ])),
-                ('fa', Pipeline([
-                    ('selector', ItemSelector(key='fa')),
-                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                ])),
-            ])),
-            ('clf', classifier),
-        ])
+                ('clf', classifier),
+            ])
 
         text_clf.fit(training_data_dict, training_data_classification)
         ###############################################
@@ -129,6 +272,153 @@ class Classifier(object):
         #print(zip(test[0], vectorizer.get_feature_names()))
         #print(test[1])
 
+        feats = text_clf.named_steps['features']
+        test = feats.transform(training_data_dict)
+        print(test[1])
+
+        return text_clf
+
+    def BuildClassifierSVM(self, training_data_dict, training_data_classification, features, vocab, UseTF):
+        vectorizer = None
+        reducer = None
+        classifier = None
+
+        ## Build and Train Model ######################
+        if UseTF == False:
+            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
+            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
+
+            classifier = SVR(kernel='rbf', gamma='auto', C=1, epsilon=0.1)
+
+            features1 = FeatureUnion([
+                    ('pos', Pipeline([
+                        ('selector', ItemSelector(key='pos')),
+                        ('vectorizer', vectorizer1),
+                    ])),
+                    ('text', Pipeline([
+                        ('selector', ItemSelector(key='text')),
+                        ('vectorizer', vectorizer2),
+                    ])),
+                    ('gpf', Pipeline([
+                        ('selector', ItemSelector(key='gpf')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tobool', FunctionTransformer(self.GetBoolArray, validate = False)),
+                    ])),
+                    ('fa', Pipeline([
+                        ('selector', ItemSelector(key='fa')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tobool', FunctionTransformer(self.GetBoolArray, validate = False)),
+                    ])),
+                ])
+
+            features2 = FeatureUnion([
+                    #('length', Pipeline([
+                    #    ('selector', ItemSelector(key='length')),
+                    #    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    #])),
+                    ('wordcount', Pipeline([
+                        ('selector', ItemSelector(key='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ])),
+                    ('fmeasure', Pipeline([
+                        ('selector', ItemSelector(key='fmeasure')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ])),
+                ])
+
+            reducer_features = self.GetFeatures3(training_data_dict, training_data_classification, features1)
+            reducer = ColumnExtractor(cols=reducer_features)
+
+            text_clf = Pipeline([
+                ('features', FeatureUnion([
+                    ('pipeline', Pipeline([
+                        ('features', features1),
+                        ('reducer', reducer),
+                    ])),
+                    ('pipeline2', Pipeline([
+                        ('features', features2),
+                        ('scaler', StandardScaler()),
+                    ])),
+                ])),
+                ('clf', classifier),
+            ])
+        elif UseTF == True:
+            vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
+            vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True)
+
+            classifier = SVR(kernel='rbf', gamma='auto', C=1, epsilon=0.1)
+
+            features1 = FeatureUnion([
+                    ('pos', Pipeline([
+                        ('selector', ItemSelector(key='pos')),
+                        ('vectorizer', vectorizer1),
+                    ])),
+                    ('text', Pipeline([
+                        ('selector', ItemSelector(key='text')),
+                        ('vectorizer', vectorizer2),
+                    ])),
+                    ('gpf', Pipeline([
+                        ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ])),
+                    ('fa', Pipeline([
+                        ('selector', ItemSelectorTF(key='fa', keycount='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ])),
+                ])
+
+            features2 = FeatureUnion([
+                    #('length', Pipeline([
+                    #    ('selector', ItemSelector(key='length')),
+                    #    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    #])),
+                    ('wordcount', Pipeline([
+                        ('selector', ItemSelector(key='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ])),
+                    ('fmeasure', Pipeline([
+                        ('selector', ItemSelector(key='fmeasure')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ])),
+                ])
+
+            reducer_features = self.GetFeatures3(training_data_dict, training_data_classification, features1)
+            reducer = ColumnExtractor(cols=reducer_features)
+
+            text_clf = Pipeline([
+                ('features', FeatureUnion([
+                    ('pipeline', Pipeline([
+                        ('features', features1),
+                        ('reducer', reducer),
+                        ('dense', DenseTransformer()),
+                        ('scaler', StandardScaler()),
+                    ])),
+                    ('pipeline2', Pipeline([
+                        ('features', features2),
+                        ('scaler', StandardScaler()),
+                    ])),
+                ])),
+                ('clf', classifier),
+            ])
+
+        text_clf.fit(training_data_dict, training_data_classification)
+        ###############################################
+
+        #feats = text_clf.named_steps['features']
+        #test = feats.transform(training_data_dict)
+        #print('Training Vect Examples')
+        #for (count, feature) in zip(test[0].toarray()[0], vectorizer.get_feature_names()):
+        #    print(str(count) + ' ' + feature)
+        #print(zip(test[0], vectorizer.get_feature_names()))
+        #print(test[1])
+
+        #pipe = text_clf.named_steps['pipeline']
+        #test = pipe.transform(training_data_dict)
+
+        feats = text_clf.named_steps['features']
+        test = feats.transform(training_data_dict)
+        print(test[1])
+
         return text_clf
 
     def GetGenericArray(self, x):
@@ -137,34 +427,11 @@ class Classifier(object):
     def GetMultipleGenericArray(self, x):
         return x
 
+    def GetBoolArray(self, x):
+        return np.where(np.array(x) > 0, 1, 0)
+
     def GetIntArray(self, x):
         return x.astype(int)
 
-    def CrossValidationTest(self, X, Y, vectorizer_type, classifier_type):
-        kf = model_selection.KFold(n_splits=10)
-
-        female_true = 0
-        female_false = 0
-        male_true = 0
-        male_false = 0
-
-        for train_index, test_index in kf.split(X):
-            X = np.array(X, dtype=object)
-            Y = np.array(Y, dtype=object)
-            X_train, X_test = list(X[train_index]), list(X[test_index])
-            Y_train, Y_test = list(Y[train_index]), list(Y[test_index])
-
-            clf = self.BuildClassifier(X_train, Y_train, vectorizer_type, classifier_type)
-
-            conf_matrix = confusion_matrix(Y_test, clf.predict(X_test))
-            female_true += conf_matrix[0][0]
-            female_false += conf_matrix[1][0]
-            male_true += conf_matrix[1][1]
-            male_false += conf_matrix[0][1]
-
-        female_accuracy = female_true / (female_false)
-        male_accuracy = male_true / (male_false)
-        #print("female accuracy", female_accuracy)
-        #print("male accuracy", male_accuracy)
-
-        return female_accuracy, male_accuracy
+    def GetFloatArray(self, x):
+        return x.astype(float)

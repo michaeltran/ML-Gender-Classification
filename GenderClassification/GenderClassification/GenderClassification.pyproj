@@ -29,10 +29,16 @@
     <Compile Include="Classes\ColumnExtractor.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Classes\DenseTransformer.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Classes\EFS.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Classes\ItemSelector.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Classes\ItemSelectorTF.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Classifier\Classifier.py">
@@ -45,7 +51,10 @@
     <Compile Include="MinePOSPats.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="test.py">
+    <Compile Include="Test\test.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Test\test2.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -56,6 +65,7 @@
     <Folder Include="data\" />
     <Folder Include="Classifier\" />
     <Folder Include="Classes\" />
+    <Folder Include="Test\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="data\blog-gender-dataset.xlsx" />
