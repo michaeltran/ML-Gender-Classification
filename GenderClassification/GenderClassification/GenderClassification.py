@@ -36,8 +36,6 @@ def main():
 
     clf = Classifier()
 
-    #features2 = clf.GetFeatures2(training_data_dict, training_data_dict['classification'], pos_pattern_vocab)
-
     features = None
     #features = clf.GetFeatures(training_data_dict, training_data_dict['classification'], pos_pattern_vocab)
 
@@ -60,17 +58,17 @@ def main():
 
     ## SVM - Regression ##########################
     print("### SVM - Regression ###")
-    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], features, pos_pattern_vocab, UseTF)
-    svm_predictions = svm_clf.predict(testing_data_dict)
+    svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], features, pos_pattern_vocab, UseTF)
+    svmr_predictions = svmr_clf.predict(testing_data_dict)
 
     predictions = []
-    for prediction in svm_predictions:
+    for prediction in svmr_predictions:
         if prediction >= 0.5:
             predictions.append(1)
         else:
             predictions.append(0)
 
-    print("SVM Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVMR Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
 
     #feats = svm_clf.named_steps['features']
 

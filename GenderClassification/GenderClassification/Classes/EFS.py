@@ -15,21 +15,35 @@ class EFS(object):
         # X_When_Y_1 = Values of X when Y = 1
         # temp = indexes when feature > 0
 
-        #test = X[:,feature]
-        #testtest = test.toarray()
+        if feature < len(self.ContingencyTableDict):
+            w, x, y, z = self.ContingencyTableDict[feature]
+        else:
+            # Full Array
+            feature_column = X[:,feature]
+            X_When_Y_1 = np.extract(Y, feature_column)
+            temp = np.where(X_When_Y_1 > 0)
+            w = float(temp[0].size)
 
-        X_When_Y_1 = np.extract(Y, X[:,feature])
-        temp = np.where(X_When_Y_1 > 0)
-        w = float(temp[0].size)
+            temp = np.where(feature_column > 0)
+            x = float(temp[0].size - w)
 
-        temp = np.where(X[:,feature] > 0)
-        x = float(temp[0].size - w)
+            temp = np.where(X_When_Y_1 == 0)
+            y = float(temp[0].size)
 
-        temp = np.where(X_When_Y_1 == 0)
-        y = float(temp[0].size)
+            temp = np.where(feature_column == 0)
+            z = float(temp[0].size - y)
 
-        temp = np.where(X[:,feature] == 0)
-        z = float(temp[0].size - y)
+            # Sparse Array
+            #indices = np.where(Y)[0]
+            #feature_column = X[:,feature]
+            #X_When_Y_1 = feature_column[indices,:]
+
+            #w = float(X_When_Y_1.nnz)
+            #x = float(feature_column.nnz - w)
+            #y = float(X_When_Y_1.shape[0] - w)
+            #z = float(feature_column.shape[0] - feature_column.nnz - y)
+
+            self.ContingencyTableDict.append((w, x, y, z))
 
         return w, x, y, z
 
@@ -70,6 +84,31 @@ class EFS(object):
             IG_ = -IG_c + (IG_f + IG_f_)
             IG.append(IG_)
         return IG
+
+    #def CalculateInformationGain(self, w, x, y, z, P_c, P_c_, IG_c):
+    #    P_f = (w + x) / N
+    #    P_f_ = 1 - P_f
+
+    #    IG_f_1 = 0
+    #    IG_f_2 = 0
+
+    #    if w != 0:
+    #        IG_f_1 = (w / (w + x)) * np.log2((w / (w + x)))
+    #    if x != 0:
+    #        IG_f_2 = (x / (w + x)) * np.log2((x / (w + x)))
+    #    IG_f = P_f * ( IG_f_1 + IG_f_2 )
+
+    #    IG_f_1 = 0
+    #    IG_f_2 = 0
+
+    #    if y != 0:
+    #        IG_f_1 = (y / (y + z)) * np.log2((y / (y + z)))
+    #    if z != 0:
+    #        IG_f_2 = (z / (y + z)) * np.log2((z / (y + z)))
+    #    IG_f_ = P_f_ * ( IG_f_1 + IG_f_2 )
+
+    #    IG_ = -IG_c + (IG_f + IG_f_)
+    #    return IG_
 
     def MutualInformation(self, X, Y):
         MI = []
@@ -114,10 +153,33 @@ class EFS(object):
         C_ = Y.count(0)
         N = C + C_
 
+        #pool = mp.Pool(mp.cpu_count())
+
+        #results = [pool.apply(CalculateChi2, args=[i, X, Y, N]) for i in range(X.shape[1])]
+        #pool.close()
+        #print(results)
+
+        #pool = mp.Pool(mp.cpu_count())
+        #def collect_result(result):
+        #    global results
+        #    results.append(result)
+
+        #for i in range(X.shape[1]):
+        #    pool.apply_async(CalculateChi2, args=[i, X, Y, N], callback=collect_result)
+
+        #pool.close()
+        #pool.join()
+
+        #results.sort(key=lambda x: x[0])
+        #results_final = [r for i, r in results]
+
         for i in range(X.shape[1]):
             w, x, y, z = self.GetContingencyTable(X, Y, i)
 
-            chi2_fc = ( N * np.power(((w * z) - (y * x)), 2) ) / ( (w + y) * (x + z) * (w + x) * (y + z) )
+            if (w + y) == 0 or (x + z) == 0 or (w + x) == 0 or (y + z) == 0:
+                chi2_fc = 0
+            else:
+                chi2_fc = ( N * np.power(((w * z) - (y * x)), 2) ) / ( (w + y) * (x + z) * (w + x) * (y + z) )
 
             chi_squared.append(chi2_fc)
         return chi_squared
@@ -179,19 +241,24 @@ class EFS(object):
         return WET
 
     def EFS(self, X, Y):
+        self.ContingencyTableDict = []
+
+        X_dense = X.toarray()
         Xi = []
         Xi.append(chi2(X, Y)[0])
-        Xi.append(self.InformationGain(X, Y))
-        Xi.append(self.MutualInformation(X, Y))
-        Xi.append(self.CrossEntropy(X, Y))
-        Xi.append(self.WeightOfEvidenceForText(X, Y))
+        #Xi.append(self.ChiSquared(X_dense, Y))
+        Xi.append(self.InformationGain(X_dense, Y))
+        Xi.append(self.MutualInformation(X_dense, Y))
+        Xi.append(self.CrossEntropy(X_dense, Y))
+        Xi.append(self.WeightOfEvidenceForText(X_dense, Y))
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
+        del X_dense
 
         t = len(Xi)                     # number of feature scoring algorithms
         if X.shape[1] > 500:
             w = int(X.shape[1]/100)     # window size
             tau_i = int(X.shape[1]/20)  # tau
-            step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
+            step_size = int(w / 10)      # step size for cross validation (ideally 1, but VERY slow performance)
         else:
             w = int(X.shape[1]/10)
             tau_i = int(X.shape[1]/2)
@@ -221,7 +288,7 @@ class EFS(object):
         for i in range(len(OptCandFeatures)):
             candidate_feature_indexes = OptCandFeatures[i]
             candidate_features = X[:,candidate_feature_indexes]
-            cv_scores = cross_val_score(MultinomialNB(), candidate_features, Y, cv=5, scoring='accuracy')
+            cv_scores = cross_val_score(MultinomialNB(), candidate_features, Y, cv=10, scoring='accuracy')
             scores.append(cv_scores.mean())
             print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 
@@ -229,6 +296,7 @@ class EFS(object):
         best_score = scores[best_score_index]
 
         print("Best Scoring Index: %d" % (best_score_index))
+        print("Best Score: %0.4f" % (best_score))
 
         candidate_feature_indexes = OptCandFeatures[best_score_index]
 

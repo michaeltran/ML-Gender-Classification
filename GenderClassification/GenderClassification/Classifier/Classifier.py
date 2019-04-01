@@ -29,7 +29,7 @@ from Classes.EFS import EFS
 from Classes.ItemSelector import ItemSelector
 from Classes.ItemSelectorTF import ItemSelectorTF
 
-efs_obj = EFS()
+import time
 
 class Classifier(object):
     def GetVectorizer(self, vectorizer_type):
@@ -99,8 +99,17 @@ class Classifier(object):
         return candidate_feature_indexes
 
     def GetFeatures3(self, training_data_dict, training_data_classification, vectorizer_pipeline):
+        start = time.time()
+
         X = vectorizer_pipeline.fit_transform(training_data_dict, training_data_classification)
-        candidate_feature_indexes = efs_obj.EFS(X.toarray(), training_data_classification)
+        efs_obj = EFS()
+        candidate_feature_indexes = efs_obj.EFS(X, training_data_classification)
+
+        #X = vectorizer_pipeline.fit_transform(training_data_dict, training_data_classification)
+        #candidate_feature_indexes = efs_obj.EFS(X.toarray(), training_data_classification)
+
+        end = time.time()
+        print("Time Run = %fs" % (end - start))
 
         return candidate_feature_indexes
 
@@ -150,7 +159,7 @@ class Classifier(object):
         #    ('clf', classifier),
         #])
 
-        if True:
+        if True: # Discrete Counts
             vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False)
             vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
@@ -204,7 +213,7 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        else:
+        else: # Bool
             vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
             vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
 
@@ -278,13 +287,13 @@ class Classifier(object):
 
         return text_clf
 
-    def BuildClassifierSVM(self, training_data_dict, training_data_classification, features, vocab, UseTF):
+    def BuildClassifierSVMR(self, training_data_dict, training_data_classification, features, vocab, UseTF):
         vectorizer = None
         reducer = None
         classifier = None
 
         ## Build and Train Model ######################
-        if UseTF == False:
+        if UseTF == False: # Bool
             vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
             vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
 
@@ -342,7 +351,7 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        elif UseTF == True:
+        elif UseTF == True: # Term Frequency (Scaled)
             vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 4), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
             vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True)
 
