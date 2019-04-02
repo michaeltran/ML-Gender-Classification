@@ -10,9 +10,11 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 
+from sklearn import model_selection
+
 from Classifier.Classifier import Classifier
 
-UseTF = False
+clf = Classifier()
 
 def main():
     start = time.time()
@@ -34,33 +36,57 @@ def main():
             pos_pattern_vocab.append(line.strip('\n'))
     ###############################################
 
-    clf = Classifier()
+    ## SVM ########################################
+    print("### SVM ###")
+    #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'tf')
+    #svm_predictions = svm_clf.predict(testing_data_dict)
+    #print("SVM TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
 
-    features = None
-    #features = clf.GetFeatures(training_data_dict, training_data_dict['classification'], pos_pattern_vocab)
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'discrete')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM DISCRETE Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'svc')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM SVC Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+
+    ## Cross Validation
+    #feats = svm_clf.named_steps['features']
+    #print("Training Score: %f" % (svm_clf.score(training_data_dict, training_data_dict['classification'])))
+    #X = feats.transform(training_data_dict)
+    #cv_scores = cross_val_score(LinearSVC(max_iter=10000), X, training_data_dict['classification'], cv=10, scoring='accuracy')
+    #print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
+    #print()
+    ###############################################
 
     ## Naive Bayes ################################
     print("### Naive Bayes ###")
-    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], features, pos_pattern_vocab)
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'tf')
     nb_predictions = nb_clf.predict(testing_data_dict)
-    print("NB Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    print("NB TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'discrete')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("NB DISCRETE Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'bool')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("NB BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
 
-    feats = nb_clf.named_steps['features']
+    #CrossValidationTest(training_data_dict, pos_pattern_vocab)
 
-    # Cross Validation
-    print("Training Score: %f" % (nb_clf.score(training_data_dict, training_data_dict['classification'])))
-    X = feats.transform(training_data_dict)
-    cv_scores = cross_val_score(MultinomialNB(), X, training_data_dict['classification'], cv=10, scoring='accuracy')
-    print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
-    print()
+    ## Cross Validation
+    #feats = nb_clf.named_steps['features']
+    #print("Training Score: %f" % (nb_clf.score(training_data_dict, training_data_dict['classification'])))
+    #X = feats.transform(training_data_dict)
+    #cv_scores = cross_val_score(MultinomialNB(), X, training_data_dict['classification'], cv=10, scoring='accuracy')
+    #print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
+    #print()
     ##############################################
 
 
     ## SVM - Regression ##########################
     print("### SVM - Regression ###")
-    svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], features, pos_pattern_vocab, UseTF)
+    svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'bool')
     svmr_predictions = svmr_clf.predict(testing_data_dict)
-
     predictions = []
     for prediction in svmr_predictions:
         if prediction >= 0.5:
@@ -68,11 +94,21 @@ def main():
         else:
             predictions.append(0)
 
-    print("SVMR Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVMR BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
 
-    #feats = svm_clf.named_steps['features']
+    svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'tf')
+    svmr_predictions = svmr_clf.predict(testing_data_dict)
+    predictions = []
+    for prediction in svmr_predictions:
+        if prediction >= 0.5:
+            predictions.append(1)
+        else:
+            predictions.append(0)
+
+    print("SVMR TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
 
     ## Cross Validation
+    #feats = svm_clf.named_steps['features']
     #print("Training Score: %f" % (svm_clf.score(training_data_dict, training_data_dict['classification'])))
     #X = feats.transform(training_data_dict)
     #cv_scores = cross_val_score(LinearSVC(max_iter=100000), X, training_data_dict['classification'], cv=10, scoring='accuracy')
@@ -106,8 +142,24 @@ def main():
 
     return
 
+def CrossValidationTest(X, pos_pattern_vocab):
+    kf = model_selection.KFold(n_splits=10)
+
+    for train_index, test_index in kf.split(X['index']):
+        X_train = {}
+        for key in X:
+            X_train[key] = [X[key][i] for i in train_index]
+        Y_test = {}
+        for key in X:
+            Y_test[key] = [X[key][i] for i in test_index]
+
+        nb_clf = clf.BuildClassifierNB(X_train, X_train['classification'], None, pos_pattern_vocab)
+        nb_predictions = nb_clf.predict(Y_test)
+        print("NB Accuracy: %0.2f" % (accuracy_score(Y_test['classification'], nb_predictions)))
+
 def LoadDataSet(path):
     data_dict = {}
+    data_dict['index'] = []
     data_dict['classification'] = []
     data_dict['text'] = []
     data_dict['pos'] = []
@@ -170,6 +222,7 @@ def LoadDataSet(path):
         #gpf = [x / word_count for x in gpf]
         #fa = [x / word_count for x in fa]
 
+        data_dict['index'].append(i)
         data_dict['classification'].append(classification)
         data_dict['text'].append(text)
         data_dict['pos'].append(pos)

@@ -1,5 +1,7 @@
 import numpy as np
 
+from scipy.sparse import issparse
+
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.naive_bayes import BernoulliNB
 
@@ -84,31 +86,6 @@ class EFS(object):
             IG_ = -IG_c + (IG_f + IG_f_)
             IG.append(IG_)
         return IG
-
-    #def CalculateInformationGain(self, w, x, y, z, P_c, P_c_, IG_c):
-    #    P_f = (w + x) / N
-    #    P_f_ = 1 - P_f
-
-    #    IG_f_1 = 0
-    #    IG_f_2 = 0
-
-    #    if w != 0:
-    #        IG_f_1 = (w / (w + x)) * np.log2((w / (w + x)))
-    #    if x != 0:
-    #        IG_f_2 = (x / (w + x)) * np.log2((x / (w + x)))
-    #    IG_f = P_f * ( IG_f_1 + IG_f_2 )
-
-    #    IG_f_1 = 0
-    #    IG_f_2 = 0
-
-    #    if y != 0:
-    #        IG_f_1 = (y / (y + z)) * np.log2((y / (y + z)))
-    #    if z != 0:
-    #        IG_f_2 = (z / (y + z)) * np.log2((z / (y + z)))
-    #    IG_f_ = P_f_ * ( IG_f_1 + IG_f_2 )
-
-    #    IG_ = -IG_c + (IG_f + IG_f_)
-    #    return IG_
 
     def MutualInformation(self, X, Y):
         MI = []
@@ -240,25 +217,32 @@ class EFS(object):
             WET.append(WET_)
         return WET
 
-    def EFS(self, X, Y):
+    def EFS(self, X, Y, classifier):
         self.ContingencyTableDict = []
 
-        X_dense = X.toarray()
+        if issparse(X):
+            X_dense = X.toarray()
+        else:
+            X_dense = X
+
         Xi = []
         Xi.append(chi2(X, Y)[0])
-        #Xi.append(self.ChiSquared(X_dense, Y))
         Xi.append(self.InformationGain(X_dense, Y))
-        Xi.append(self.MutualInformation(X_dense, Y))
-        Xi.append(self.CrossEntropy(X_dense, Y))
-        Xi.append(self.WeightOfEvidenceForText(X_dense, Y))
+        #Xi.append(self.MutualInformation(X_dense, Y))
+        #Xi.append(self.CrossEntropy(X_dense, Y))
+        #Xi.append(self.WeightOfEvidenceForText(X_dense, Y))
+
+        #Xi.append(self.ChiSquared(X_dense, Y))
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
+
         del X_dense
+        del self.ContingencyTableDict
 
         t = len(Xi)                     # number of feature scoring algorithms
         if X.shape[1] > 500:
             w = int(X.shape[1]/100)     # window size
             tau_i = int(X.shape[1]/20)  # tau
-            step_size = int(w / 10)      # step size for cross validation (ideally 1, but VERY slow performance)
+            step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
         else:
             w = int(X.shape[1]/10)
             tau_i = int(X.shape[1]/2)
@@ -275,6 +259,8 @@ class EFS(object):
                 iterator += 1
             C.append(C_i)
 
+        del Xi
+
         OptCandFeatures = []
         while len(C[0]) > 0:
             big_lambda = []
@@ -288,15 +274,16 @@ class EFS(object):
         for i in range(len(OptCandFeatures)):
             candidate_feature_indexes = OptCandFeatures[i]
             candidate_features = X[:,candidate_feature_indexes]
-            cv_scores = cross_val_score(MultinomialNB(), candidate_features, Y, cv=10, scoring='accuracy')
+            cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy')
             scores.append(cv_scores.mean())
-            print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
+            #print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 
         best_score_index = scores.index(max(scores))
         best_score = scores[best_score_index]
 
-        print("Best Scoring Index: %d" % (best_score_index))
-        print("Best Score: %0.4f" % (best_score))
+        #print("Best Scoring Index: %d" % (best_score_index))
+        #print("Best Score: %0.4f" % (best_score))
+        print("Best Scoring Index: %d, Best Score: %0.4f" % (best_score_index, best_score))
 
         candidate_feature_indexes = OptCandFeatures[best_score_index]
 
