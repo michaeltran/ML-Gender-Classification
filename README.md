@@ -1,3 +1,2 @@
-# COSC 6342 - Project
-
-Machine Learning Project
+# Machine Learning - Gender Classification
+COSC 6342 - Machine Learning
