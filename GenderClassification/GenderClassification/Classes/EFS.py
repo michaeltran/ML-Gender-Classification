@@ -1,5 +1,4 @@
 import numpy as np
-
 from scipy.sparse import issparse
 
 from sklearn.naive_bayes import MultinomialNB
@@ -7,6 +6,9 @@ from sklearn.naive_bayes import BernoulliNB
 
 from sklearn.feature_selection import chi2
 from sklearn.model_selection import cross_val_score
+
+from Classes.FSC import FSC
+from Helper.DebugPrint import DebugPrint
 
 class EFS(object):
     def GetContingencyTable(self, X, Y, feature):
@@ -217,7 +219,7 @@ class EFS(object):
             WET.append(WET_)
         return WET
 
-    def EFS(self, X, Y, classifier):
+    def EFS(self, X, Y, classifier, feature_selections):
         self.ContingencyTableDict = []
 
         if issparse(X):
@@ -226,11 +228,17 @@ class EFS(object):
             X_dense = X
 
         Xi = []
-        Xi.append(chi2(X, Y)[0])
-        Xi.append(self.InformationGain(X_dense, Y))
-        #Xi.append(self.MutualInformation(X_dense, Y))
-        #Xi.append(self.CrossEntropy(X_dense, Y))
-        #Xi.append(self.WeightOfEvidenceForText(X_dense, Y))
+        for feature_selection in feature_selections:
+            if FSC.CHI == feature_selection:
+                Xi.append(chi2(X, Y)[0])
+            elif FSC.IG == feature_selection:
+                Xi.append(self.InformationGain(X_dense, Y))
+            elif FSC.MI == feature_selection:
+                Xi.append(self.MutualInformation(X_dense, Y))
+            elif FSC.CE == feature_selection:
+                Xi.append(self.CrossEntropy(X_dense, Y))
+            elif FSC.WOE == feature_selection:
+                Xi.append(self.WeightOfEvidenceForText(X_dense, Y))
 
         #Xi.append(self.ChiSquared(X_dense, Y))
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
@@ -276,14 +284,14 @@ class EFS(object):
             candidate_features = X[:,candidate_feature_indexes]
             cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy')
             scores.append(cv_scores.mean())
-            #print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
+            DebugPrint("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 
         best_score_index = scores.index(max(scores))
         best_score = scores[best_score_index]
 
-        #print("Best Scoring Index: %d" % (best_score_index))
-        #print("Best Score: %0.4f" % (best_score))
-        print("Best Scoring Index: %d, Best Score: %0.4f" % (best_score_index, best_score))
+        DebugPrint("Best Scoring Index: %d" % (best_score_index))
+        DebugPrint("Best Score: %0.4f" % (best_score))
+        DebugPrint("Best Scoring Index: %d, Best Score: %0.4f" % (best_score_index, best_score))
 
         candidate_feature_indexes = OptCandFeatures[best_score_index]
 

@@ -2,13 +2,18 @@ import nltk
 import argparse
 import xlsxwriter
 import pandas as pd
+import codecs
 from random import shuffle
 
 from MinePOSPats import MinePOSPats
+from MineWordPats import MineWordPats
 
 import numpy as np
 
 def SplitData():
+    tokens = nltk.word_tokenize("can't")
+    tagged = nltk.pos_tag(tokens)
+
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
@@ -68,9 +73,22 @@ def SplitData():
         testing_data_text.append(data_female_text[i])
         testing_data_classification.append(0)
 
+    # Word Pattern Mining
+    if opts.mine == True:
+        mine_obj = MineWordPats(training_data_text + testing_data_text, 0.05, 0.05)
+        pos_pats = mine_obj.MineWordPats()
+
+        # Write Word Patterns to Text
+        with codecs.open('data/WordPatterns.txt', 'w', encoding='utf8') as file:
+            patterns = []
+            for pos_pat in pos_pats:
+                pattern = ' '.join(pos_pat)
+                patterns.append(pattern)
+            file.write('\n'.join(patterns))
+
     # POS Pattern Mining
     if opts.mine == True:
-        mine_obj = MinePOSPats(training_data_text, 0.3, 0.2)
+        mine_obj = MinePOSPats(training_data_text + testing_data_text, 0.3, 0.2)
         pos_pats = mine_obj.MinePOSPats()
 
         # Write POS Patterns to Text
