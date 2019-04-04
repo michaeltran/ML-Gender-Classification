@@ -14,9 +14,6 @@ class MineWordPats(object):
         self.D, self.T = self.ConvertToWord(D_words)
         self.minSupport = int(len(self.D) * minSupport)
         self.minAdherence = minAdherence
-        print('Total Amount of Documents: %d' % (len(self.D)))
-        print('Minimum Support: %d' % (self.minSupport))
-        print('Minimum Adherence: %0.2f' % (self.minAdherence))
 
     def ConvertToWord(self, D_words):
         D = []
@@ -34,6 +31,10 @@ class MineWordPats(object):
 
     def MineWordPats(self):
         print('Start Word Mining')
+        print('Total Amount of Documents: %d' % (len(self.D)))
+        print('Total Amount of Unique Words: %d' % (len(self.T)))
+        print('Minimum Support: %d' % (self.minSupport))
+        print('Minimum Adherence: %0.2f' % (self.minAdherence))
         C = []
         F = []
         SP = []
@@ -79,6 +80,7 @@ class MineWordPats(object):
         result = []
         for SP_k in SP:
             result += SP_k
+        print('Extracted POS Patterns: %d' % (len(result)))
         return result
 
     def CandidateGen(self, F_k_1):

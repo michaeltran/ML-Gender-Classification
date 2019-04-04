@@ -86,6 +86,8 @@ def SplitData():
                 patterns.append(pattern)
             file.write('\n'.join(patterns))
 
+    print()
+
     # POS Pattern Mining
     if opts.mine == True:
         mine_obj = MinePOSPats(training_data_text + testing_data_text, 0.3, 0.2)

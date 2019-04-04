@@ -176,8 +176,12 @@ class EFS(object):
 
             P_f = (w + x) / N
 
-            P_cGf = w / (w + x)
-            P_c_Gf = x / (w + x)
+            P_cGf = 0
+            P_c_Gf = 0
+
+            if w + x != 0:
+                P_cGf = w / (w + x)
+                P_c_Gf = x / (w + x)
 
             CE1 = 0
             CE2 = 0
@@ -203,8 +207,12 @@ class EFS(object):
             P_f = (w + x) / N
             P_f_ = 1 - P_f
 
-            P_cGf = w / (w + x)
-            P_c_Gf = x / (w + x)
+            P_cGf = 0
+            P_c_Gf = 0
+
+            if w + x != 0:
+                P_cGf = w / (w + x)
+                P_c_Gf = x / (w + x)
 
             WET1 = 0
             WET2 = 0

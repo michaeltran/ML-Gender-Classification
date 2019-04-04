@@ -51,7 +51,7 @@ def main():
     svmr_classifiers = []
     svmr_predictors = []
 
-    #svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, 'default')
+    #svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
     #svmr_predictions = svmr_clf.predict(testing_data_dict)
     #predictions = []
     #for prediction in svmr_predictions:
@@ -59,7 +59,7 @@ def main():
     #        predictions.append(1)
     #    else:
     #        predictions.append(0)
-    #print("SVMR BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    #print("SVMR DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     #svmr_classifiers.append(svmr_clf)
     #svmr_predictors.append(predictions)
 
@@ -71,13 +71,13 @@ def main():
 
     #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'default')
     #svm_predictions = svm_clf.predict(testing_data_dict)
-    #print("SVM TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #print("SVM DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     #svm_classifiers.append(svm_clf)
     #svm_predictors.append(svm_predictions)
 
     #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'default')
     #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    #print("NB DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
     #nb_classifiers.append(nb_clf)
     #nb_predictors.append(nb_predictions)
 
@@ -143,6 +143,18 @@ def main():
 
     ## SVM - Regression ##########################
     print("### SVM - Regression ###")
+    svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'linearsvr')
+    svmr_predictions = svmr_clf.predict(testing_data_dict)
+    predictions = []
+    for prediction in svmr_predictions:
+        if prediction >= 0.5:
+            predictions.append(1)
+        else:
+            predictions.append(0)
+    print("SVM-R LINEAR DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    svmr_classifiers.append(svmr_clf)
+    svmr_predictors.append(predictions)
+
     svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
     svmr_predictions = svmr_clf.predict(testing_data_dict)
     predictions = []
@@ -151,7 +163,7 @@ def main():
             predictions.append(1)
         else:
             predictions.append(0)
-    print("SVMR BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVM-R BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     svmr_classifiers.append(svmr_clf)
     svmr_predictors.append(predictions)
 
@@ -163,7 +175,7 @@ def main():
             predictions.append(1)
         else:
             predictions.append(0)
-    print("SVMR TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVM-R TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     svmr_classifiers.append(svmr_clf)
     svmr_predictors.append(predictions)
 
