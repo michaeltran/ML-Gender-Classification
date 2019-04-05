@@ -367,29 +367,41 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        elif svm_type == 'tf': # TF [CHI, IG] - 0.70 ACC
-            pos_vectorizer = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=True)
-            text_vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=True)
+        elif svm_type == 'tf': 
+            # TF 1-GRAM [ALL] - 0.74 ACC
+            # 2/3-gram lowers accuracy
+            # [CHI, IG] lower accuracy than [ALL]
+            # Higher accuracy without POS/GPF/FA
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = LinearSVC()
+            #parameters = [
+            #    {'C': [0.01, 0.1, 1, 10], 'penalty': ('l1','l2')}
+            #    ]
+            #final_class = GridSearchCV(classifier, parameters, cv=5)
 
             features1 = FeatureUnion([
-                    ('pos', Pipeline([
-                        ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', pos_vectorizer),
-                    ])),
+                    #('pos', Pipeline([
+                    #    ('selector', ItemSelector(key='pos')),
+                    #    ('vectorizer', pos_vectorizer),
+                    #    ('tfidf', TfidfTransformer(use_idf=True)),
+                    #])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='text')),
+                        ('selector', ItemSelector(key='tokenized_text')),
                         ('vectorizer', text_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
                     ])),
-                    ('gpf', Pipeline([
-                        ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
-                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                    ])),
-                    ('fa', Pipeline([
-                        ('selector', ItemSelectorTF(key='fa', keycount='wordcount')),
-                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                    ])),
+                    #('gpf', Pipeline([
+                    #    ('selector', ItemSelector(key='gpf')),
+                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    #    ('tfidf', TfidfTransformer(use_idf=True)),
+                    #])),
+                    #('fa', Pipeline([
+                    #    ('selector', ItemSelector(key='fa')),
+                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    #    ('tfidf', TfidfTransformer(use_idf=True)),
+                    #])),
                 ])
 
             features2 = FeatureUnion([
@@ -403,7 +415,7 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
+            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
             reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
@@ -416,6 +428,21 @@ class Classifier(object):
                         ('features', features2),
                         ('scaler', MaxAbsScaler()),
                     ])),
+                    #('pos', Pipeline([
+                    #    ('selector', ItemSelector(key='pos')),
+                    #    ('vectorizer', pos_vectorizer),
+                    #    ('tfidf', TfidfTransformer(use_idf=True)),
+                    #])),
+                    #('gpf', Pipeline([
+                    #    ('selector', ItemSelector(key='gpf')),
+                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    #    ('tfidf', TfidfTransformer(use_idf=True)),
+                    #])),
+                    #('fa', Pipeline([
+                    #    ('selector', ItemSelector(key='fa')),
+                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    #    ('tfidf', TfidfTransformer(use_idf=True)),
+                    #])),
                 ])),
                 ('clf', classifier),
             ])
