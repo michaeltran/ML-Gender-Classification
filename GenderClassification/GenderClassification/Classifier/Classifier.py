@@ -63,19 +63,19 @@ class Classifier(object):
     def BuildClassifierNB(self, training_data_dict, training_data_classification, vocab, word_vocab, nb_type):
         ## Build and Train Model ######################
         if nb_type == 'default':
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            vectorizer2 = CountVectorizer(vocabulary=word_vocab, analyzer='word', ngram_range=(1, 3), lowercase=True, tokenizer=lambda x: x.split(' '))
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = MultinomialNB()
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='untagged_text')),
-                        ('vectorizer', vectorizer2),
+                        ('selector', ItemSelector(key='tokenized_text')),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -115,28 +115,33 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        elif nb_type == 'tf': # TF - 1-GRAM [CHI, IG] (0.72 CV, 0.69 ACC)
-            vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=True)
-            vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=True)
+        elif nb_type == 'tf': 
+            ## TF - 1-GRAM [CHI, IG] [ALL] (0.69 ACC)
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = MultinomialNB()
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
                     ])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('selector', ItemSelector(key='tokenized_text')),
+                        ('vectorizer', text_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
                     ])),
                     ('gpf', Pipeline([
-                        ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
+                        ('selector', ItemSelector(key='gpf')),
                         ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
                     ])),
                     ('fa', Pipeline([
-                        ('selector', ItemSelectorTF(key='fa', keycount='wordcount')),
+                        ('selector', ItemSelector(key='fa')),
                         ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
                     ])),
                 ])
 
@@ -153,7 +158,7 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
+            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
             reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
@@ -161,6 +166,7 @@ class Classifier(object):
                     ('pipeline', Pipeline([
                         ('features', features1),
                         ('reducer', reducer),
+                        ('scaler', MaxAbsScaler()),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -169,20 +175,21 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        elif nb_type == 'discrete': # Discrete [ALL] 0.67 ACC
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
+        elif nb_type == 'discrete': 
+            ## Discrete 2-GRAM [ALL] 0.67 ACC
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = MultinomialNB()
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('selector', ItemSelector(key='tokenized_text')),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -222,20 +229,23 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        elif nb_type == 'bool': # Bool - 2-GRAM [CHI, IG] (0.92 CV, 0.69 ACC)
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
-            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '), binary=True)
+        elif nb_type == 'bool': 
+            ## Bool - 2-GRAM [CHI, IG] (0.92 CV, 0.70 ACC)
+            # Changing features2 to smaller bin or using MaxAbsScaler() does nothing
+            # Changed to tokenized_text which lowered accuracy
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '), binary=True)
 
             classifier = MultinomialNB()
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('selector', ItemSelector(key='tokenized_text')),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -300,8 +310,8 @@ class Classifier(object):
         ## Build and Train Model ######################
 
         if svm_type == 'default':
-            vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
-            vectorizer2 = TfidfVectorizer(vocabulary=word_vocab, analyzer='word', ngram_range=(1, 2), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=False)
+            pos_vectorizer = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
+            text_vectorizer = TfidfVectorizer(vocabulary=word_vocab, analyzer='word', ngram_range=(1, 2), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=False)
 
             classifier = LinearSVC(max_iter=10000, C=1, penalty='l2', loss='hinge')
             #parameters = [
@@ -312,11 +322,11 @@ class Classifier(object):
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
@@ -357,73 +367,20 @@ class Classifier(object):
                 ])),
                 ('clf', classifier),
             ])
-        #elif svm_type == 'svc': # SVC 0.68 linear
-        #    vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
-        #    vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=False)
-
-        #    classifier = SVC(C=1, kernel='linear', degree=3, gamma='auto')
-
-        #    features1 = FeatureUnion([
-        #            ('pos', Pipeline([
-        #                ('selector', ItemSelector(key='pos')),
-        #                ('vectorizer', vectorizer1),
-        #            ])),
-        #            ('text', Pipeline([
-        #                ('selector', ItemSelector(key='text')),
-        #                ('vectorizer', vectorizer2),
-        #            ])),
-        #            ('gpf', Pipeline([
-        #                ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
-        #                ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-        #            ])),
-        #            ('fa', Pipeline([
-        #                ('selector', ItemSelectorTF(key='fa', keycount='wordcount')),
-        #                ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-        #            ])),
-        #        ])
-
-        #    features2 = FeatureUnion([
-        #            ('wordcount', Pipeline([
-        #                ('selector', ItemSelector(key='wordcount')),
-        #                ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
-        #            ])),
-        #            ('fmeasure', Pipeline([
-        #                ('selector', ItemSelector(key='fmeasure')),
-        #                ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
-        #            ])),
-        #        ])
-
-        #    #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier)
-        #    #reducer = ColumnExtractor(cols=reducer_features)
-
-        #    text_clf = Pipeline([
-        #        ('features', FeatureUnion([
-        #            ('pipeline', Pipeline([
-        #                ('features', features1),
-        #                #('reducer', reducer),
-        #                ('scaler', MaxAbsScaler()),
-        #            ])),
-        #            ('pipeline2', Pipeline([
-        #                ('features', features2),
-        #                ('scaler', MaxAbsScaler()),
-        #            ])),
-        #        ])),
-        #        ('clf', classifier),
-        #    ])
-        elif svm_type == 'tf': # TF [CHI, IG] - 0.79 CV, 0.70 ACC
-            vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=True)
-            vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=True)
+        elif svm_type == 'tf': # TF [CHI, IG] - 0.70 ACC
+            pos_vectorizer = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=True)
+            text_vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=True)
 
             classifier = LinearSVC()
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
@@ -463,20 +420,20 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif svm_type == 'discrete': # Discrete - 2GRAM 0.70 ACC NO REDUC
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '))
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = LinearSVC(max_iter=10000)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                         ('scaler', MaxAbsScaler()),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                         ('scaler', MaxAbsScaler()),
                     ])),
                     ('gpf', Pipeline([
@@ -519,19 +476,19 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif svm_type == 'svc': # SVC 0.68 linear
-            vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
-            vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=False)
+            pos_vectorizer = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
+            text_vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=False)
 
             classifier = SVC(C=1, kernel='linear', degree=3, gamma='auto')
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
@@ -588,8 +545,8 @@ class Classifier(object):
         ## Build and Train Model ######################
         
         if svmr_type == 'linearsvr':
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            vectorizer2 = CountVectorizer(vocabulary=word_vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=True)
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(vocabulary=word_vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=True)
 
             classifier = LinearSVR(max_iter=10000)
             parameters = [
@@ -600,11 +557,11 @@ class Classifier(object):
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='untagged_text')),
-                        ('vectorizer', vectorizer2),
+                        ('selector', ItemSelector(key='tokenized_text')),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -645,8 +602,8 @@ class Classifier(object):
                 ('clf', final_class),
             ])
         elif svmr_type == 'default':
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
-            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
 
             classifier = SVR(kernel='rbf', gamma='auto', C=1, epsilon=0.1)
             parameters = [
@@ -656,11 +613,11 @@ class Classifier(object):
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -705,19 +662,19 @@ class Classifier(object):
                 ('clf', final_class),
             ])
         elif svmr_type == 'bool': # Bool - 0.65 1-GRAM
-            vectorizer1 = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
-            vectorizer2 = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, binary=True)
 
             classifier = SVR(kernel='rbf', gamma='auto', C=1, epsilon=0.1)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -759,19 +716,19 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif svmr_type == 'tf': # Term Frequency (Scaled) - 0.65
-            vectorizer1 = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
-            vectorizer2 = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True)
+            pos_vectorizer = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
+            text_vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True)
 
             classifier = SVR(kernel='rbf', gamma='auto', C=1, epsilon=0.1)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
-                        ('vectorizer', vectorizer1),
+                        ('vectorizer', pos_vectorizer),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
-                        ('vectorizer', vectorizer2),
+                        ('vectorizer', text_vectorizer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),

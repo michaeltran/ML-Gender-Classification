@@ -20,7 +20,8 @@ class MineWordPats(object):
         T = []
         for d_words in D_words:
             d = []
-            for word in d_words.split(' '):
+
+            for word in nltk.word_tokenize(d_words):
                 if word == '':
                     continue
                 d.append(word.lower())
@@ -80,7 +81,7 @@ class MineWordPats(object):
         result = []
         for SP_k in SP:
             result += SP_k
-        print('Extracted POS Patterns: %d' % (len(result)))
+        print('Extracted Word Patterns: %d' % (len(result)))
         return result
 
     def CandidateGen(self, F_k_1):

@@ -116,6 +116,7 @@ def WriteToExcel(path, data_text, data_classification):
         col = 0;
         worksheet.write(row, col, 'Classification'); col += 1;
         worksheet.write(row, col, 'Text'); col += 1;
+        worksheet.write(row, col, 'TokenizedText'); col += 1;
         worksheet.write(row, col, 'POS'); col += 1;
         worksheet.write(row, col, 'TaggedPOS'); col += 1;
         worksheet.write(row, col, 'WordCount'); col += 1;
@@ -158,15 +159,17 @@ def WriteToExcel(path, data_text, data_classification):
         for i in range(len(data_text)):
             col = 0;
             text = data_text[i];
+            tokenized_text = GetTokenizedText(text)
             pos = GetPOS(text);
             tagged_pos = GetTaggedPOS(text);
             gpf = GetGenderPreferentialFeatures(text);
             fa = GetFactorAnalysis(text);
             worksheet.write(row, col, data_classification[i]); col += 1;
             worksheet.write(row, col, text); col += 1;
+            worksheet.write(row, col, tokenized_text); col += 1;
             worksheet.write(row, col, pos); col += 1;
             worksheet.write(row, col, tagged_pos); col += 1;
-            worksheet.write(row, col, len(text.split())); col += 1;
+            worksheet.write(row, col, len(nltk.word_tokenize(text))); col += 1;
             worksheet.write(row, col, len(text)); col += 1;
             worksheet.write(row, col, GetFMeasure(text)); col += 1;
             worksheet.write(row, col, gpf[0]); col += 1;
@@ -203,6 +206,11 @@ def WriteToExcel(path, data_text, data_classification):
             worksheet.write(row, col, fa[21]); col += 1;
             worksheet.write(row, col, fa[22]); col += 1;
             row += 1;
+    return
+
+def GetTokenizedText(text):
+    tokens = nltk.word_tokenize(text)
+    return ' '.join(tokens)
 
 def GetPOS(text):
     tokens = nltk.word_tokenize(text)
@@ -272,7 +280,7 @@ def GetGenderPreferentialFeatures(text):
     f = []
     for i in range(10):
         f.append(0)
-    for word in text.split():
+    for word in nltk.word_tokenize(text):
         word = word.lower()
         if word.endswith(('able')):
             f[0] += 1
@@ -371,7 +379,7 @@ def GetFactorAnalysis(text):
 
     for i in range(len(words_in_factor)):
         f.append(0)
-    for word in text.split():
+    for word in nltk.word_tokenize(text):
         word = word.lower()
         for i in range(len(words_in_factor)):
             if word in words_in_factor[i]:
