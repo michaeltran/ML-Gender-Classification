@@ -317,7 +317,7 @@ class Classifier(object):
             #parameters = [
             #    #{'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False], 'C': [0.1, 1]}, 
             #    {'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge'], 'C': [0.1, 1]}]
-            #final_class = GridSearchCV(classifier, parameters, cv=5)
+            #final_classifier = GridSearchCV(classifier, parameters, cv=5)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -349,7 +349,7 @@ class Classifier(object):
                     ])),
                 ])
 
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, final_class, [FSC.CHI, FSC.IG])
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, final_classifier, [FSC.CHI, FSC.IG])
             #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
@@ -370,16 +370,17 @@ class Classifier(object):
         elif svm_type == 'tf': 
             # TF 1-GRAM [ALL] - 0.74 ACC
             # 2/3-gram lowers accuracy
-            # [CHI, IG] lower accuracy than [ALL]
-            # Higher accuracy without POS/GPF/FA
+            # [CHI, IG] lower accuracy than [ALL] TO DO: TEST
+            # Higher accuracy without POS/GPF/FA TO DO: TEST
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
-            classifier = LinearSVC()
-            #parameters = [
-            #    {'C': [0.01, 0.1, 1, 10], 'penalty': ('l1','l2')}
-            #    ]
-            #final_class = GridSearchCV(classifier, parameters, cv=5)
+            classifier = LinearSVC(max_iter=100000)
+            parameters = [
+                    {'C': [0.01, 0.1, 1, 10], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
+                    {'C': [0.01, 0.1, 1, 10], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
+                ]
+            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=-1)
 
             features1 = FeatureUnion([
                     #('pos', Pipeline([
@@ -444,34 +445,42 @@ class Classifier(object):
                     #    ('tfidf', TfidfTransformer(use_idf=True)),
                     #])),
                 ])),
-                ('clf', classifier),
+                ('clf', final_classifier),
             ])
-        elif svm_type == 'discrete': # Discrete - 2GRAM 0.70 ACC NO REDUC
+        elif svm_type == 'discrete': 
+            # Discrete - 2GRAM 0.70 ACC NO REDUC
+            # Normalizer Performs Better Than MinMaxScaler
+            # L2 norm performs better than L1 normalization
+            # 1-Gram vs 2-Gram doen't matter - TO DO
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '))
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
-            classifier = LinearSVC(max_iter=10000)
+            classifier = LinearSVC(max_iter=100000)
+            parameters = [
+                    {'C': [0.1, 1, 2, 3, 4, 5]},
+                ]
+            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
                         ('vectorizer', pos_vectorizer),
-                        ('scaler', MaxAbsScaler()),
+                        ('scaler', Normalizer(norm='l2')),
                     ])),
                     ('text', Pipeline([
-                        ('selector', ItemSelector(key='text')),
+                        ('selector', ItemSelector(key='tokenized_text')),
                         ('vectorizer', text_vectorizer),
-                        ('scaler', MaxAbsScaler()),
+                        ('scaler', Normalizer(norm='l2')),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
                         ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                        ('scaler', MaxAbsScaler()),
+                        ('scaler', Normalizer(norm='l2')),
                     ])),
                     ('fa', Pipeline([
                         ('selector', ItemSelector(key='fa')),
                         ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                        ('scaler', MaxAbsScaler()),
+                        ('scaler', Normalizer(norm='l2')),
                     ])),
                 ])
 
@@ -479,14 +488,16 @@ class Classifier(object):
                     ('wordcount', Pipeline([
                         ('selector', ItemSelector(key='wordcount')),
                         ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                        ('scaler', Normalizer(norm='l2')),
                     ])),
                     ('fmeasure', Pipeline([
                         ('selector', ItemSelector(key='fmeasure')),
                         ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                        ('scaler', Normalizer(norm='l2')),
                     ])),
                 ])
 
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
             #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
@@ -497,14 +508,15 @@ class Classifier(object):
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
-                        ('scaler', MaxAbsScaler()),
                     ])),
                 ])),
-                ('clf', classifier),
+                ('clf', final_classifier),
             ])
-        elif svm_type == 'svc': # SVC 0.68 linear
-            pos_vectorizer = TfidfVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, use_idf=False)
-            text_vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '), use_idf=False)
+        elif svm_type == 'svc': 
+            # SVC 0.69 linear
+            # TO DO - GPF and FA Self-TF better accuracy
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = SVC(C=1, kernel='linear', degree=3, gamma='auto')
 
@@ -512,18 +524,22 @@ class Classifier(object):
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
                         ('vectorizer', pos_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=False)),
                     ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='text')),
                         ('vectorizer', text_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=False)),
                     ])),
                     ('gpf', Pipeline([
-                        ('selector', ItemSelectorTF(key='gpf', keycount='wordcount')),
+                        ('selector', ItemSelector(key='gpf')),
                         ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=False)),
                     ])),
                     ('fa', Pipeline([
-                        ('selector', ItemSelectorTF(key='fa', keycount='wordcount')),
+                        ('selector', ItemSelector(key='fa')),
                         ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=False)),
                     ])),
                 ])
 
@@ -557,14 +573,14 @@ class Classifier(object):
             ])
 
         text_clf.fit(training_data_dict, training_data_classification)
-        #print(final_class.best_params_)
+        #print(final_classifier.best_params_)
         #print(classifier.coef_ )
         ###############################################
 
         feats = text_clf.named_steps['features']
         test = feats.transform(training_data_dict)
         DebugPrint(test[1])
-        #print(test[1])
+        print(test[1])
 
         return text_clf
 
@@ -579,7 +595,7 @@ class Classifier(object):
             parameters = [
                 {'C': [0.01, 0.1, 1, 10], 'epsilon': [0, 0.1, 1], 'loss':('epsilon_insensitive', 'squared_epsilon_insensitive')}
                 ]
-            final_class = GridSearchCV(classifier, parameters, cv=5)
+            final_classifier = GridSearchCV(classifier, parameters, cv=5)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -626,7 +642,7 @@ class Classifier(object):
                         ('scaler', MinMaxScaler()),
                     ])),
                 ])),
-                ('clf', final_class),
+                ('clf', final_classifier),
             ])
         elif svmr_type == 'default':
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
@@ -635,7 +651,7 @@ class Classifier(object):
             classifier = SVR(kernel='rbf', gamma='auto', C=1, epsilon=0.1)
             parameters = [
                 {'kernel': ('linear', 'rbf'), 'C': [0.1, 10]}]
-            final_class = GridSearchCV(classifier, parameters, cv=5)
+            final_classifier = GridSearchCV(classifier, parameters, cv=5)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -686,7 +702,7 @@ class Classifier(object):
                         ('scaler', StandardScaler()),
                     ])),
                 ])),
-                ('clf', final_class),
+                ('clf', final_classifier),
             ])
         elif svmr_type == 'bool': # Bool - 0.65 1-GRAM
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)
@@ -798,7 +814,7 @@ class Classifier(object):
             ])
 
         text_clf.fit(training_data_dict, training_data_classification)
-        #print(final_class.best_params_)
+        #print(final_classifier.best_params_)
         ###############################################
 
         feats = text_clf.named_steps['features']
