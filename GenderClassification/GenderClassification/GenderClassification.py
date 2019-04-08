@@ -95,6 +95,11 @@ def main():
 
     ## SVM ########################################
     print("### SVM ###")
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    predictors['SVM BOOL'] = svm_predictions
+
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
     svm_predictions = svm_clf.predict(testing_data_dict)
     print("SVM TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
