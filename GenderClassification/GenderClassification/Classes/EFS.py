@@ -235,23 +235,29 @@ class EFS(object):
         else:
             X_dense = X
 
+        Y_mask = np.array(Y)
+        Y_mask[Y_mask < 0] = 0
+        Y_mask = Y_mask.tolist()
+
         Xi = []
         for feature_selection in feature_selections:
             if FSC.CHI == feature_selection:
-                Xi.append(chi2(X, Y)[0])
+                #Xi.append(chi2(X, Y)[0])
+                Xi.append(self.ChiSquared(X_dense, Y_mask))
             elif FSC.IG == feature_selection:
-                Xi.append(self.InformationGain(X_dense, Y))
+                Xi.append(self.InformationGain(X_dense, Y_mask))
             elif FSC.MI == feature_selection:
-                Xi.append(self.MutualInformation(X_dense, Y))
+                Xi.append(self.MutualInformation(X_dense, Y_mask))
             elif FSC.CE == feature_selection:
-                Xi.append(self.CrossEntropy(X_dense, Y))
+                Xi.append(self.CrossEntropy(X_dense, Y_mask))
             elif FSC.WOE == feature_selection:
-                Xi.append(self.WeightOfEvidenceForText(X_dense, Y))
+                Xi.append(self.WeightOfEvidenceForText(X_dense, Y_mask))
 
         #Xi.append(self.ChiSquared(X_dense, Y))
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
 
         del X_dense
+        del Y_mask
         del self.ContingencyTableDict
 
         t = len(Xi)                     # number of feature scoring algorithms
@@ -264,6 +270,10 @@ class EFS(object):
             tau_i = int(X.shape[1]/2)
             step_size = 1
 
+        #w = int(X.shape[1]/25)
+        #tau_i = int(X.shape[1]/2)
+        #step_size = int(w / 20)
+
         C = []
         for i in range(0, t):
             C_i = []
@@ -271,6 +281,7 @@ class EFS(object):
             for tau in range(tau_i-w, tau_i+w):
                 if (iterator % step_size == 0):
                     zeta_i = np.argsort(Xi[i])[-tau:]
+                    #zeta_i = np.argsort(Xi[i])[:tau]
                     C_i.append(zeta_i)
                 iterator += 1
             C.append(C_i)

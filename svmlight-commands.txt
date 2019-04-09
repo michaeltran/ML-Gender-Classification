@@ -1,0 +1,31 @@
+cls
+svm_learn -z r -j 1.1 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions
+
+
+
+# POLYNOMIAL
+cls
+svm_learn -z r -j 1.1 -t 1 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions
+
+# RBF
+cls
+svm_learn -z r -j 1.1 -t 2 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions
+
+# SIGMOID
+cls
+svm_learn -z r -j 1.1 -t 3 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions
+
+# LINEAR 
+cls
+svm_learn -z r -j 1.1 -t 0 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions
+
+
+
+cls
+svm_learn -z r -j 1 -t 0 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions

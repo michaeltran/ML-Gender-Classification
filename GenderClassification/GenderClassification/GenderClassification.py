@@ -11,6 +11,7 @@ from sklearn.svm import LinearSVC
 from sklearn.svm import SVC
 
 from sklearn import model_selection
+from scipy.sparse import coo_matrix
 
 from Classifier.Classifier import Classifier
 from Helper.DebugPrint import DebugPrint
@@ -105,6 +106,16 @@ def main():
     print("SVM TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM TF'] = svm_predictions
 
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'svmlight-tf')
+    feats = svm_clf.named_steps['features']
+    X = feats.transform(training_data_dict)
+    ConvertToSVMLight(X, training_data_dict['classification'], 'data/TrainSVMLight.txt')
+    X = feats.transform(testing_data_dict)
+    ConvertToSVMLight(X, testing_data_dict['classification'], 'data/TestSVMLight.txt')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM LIGHT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    predictors['SVM LIGHT'] = svm_predictions
+
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
     svm_predictions = svm_clf.predict(testing_data_dict)
     print("SVM DISCRETE Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
@@ -122,10 +133,10 @@ def main():
     svmr_predictions = svmr_clf.predict(testing_data_dict)
     predictions = []
     for prediction in svmr_predictions:
-        if prediction >= 0.5:
+        if prediction >= 0:
             predictions.append(1)
         else:
-            predictions.append(0)
+            predictions.append(-1)
     print("SVM-R LINEAR DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R LINEAR'] = svmr_predictions
 
@@ -133,10 +144,10 @@ def main():
     svmr_predictions = svmr_clf.predict(testing_data_dict)
     predictions = []
     for prediction in svmr_predictions:
-        if prediction >= 0.5:
+        if prediction >= 0:
             predictions.append(1)
         else:
-            predictions.append(0)
+            predictions.append(-1)
     print("SVM-R BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R BOOL'] = svmr_predictions
 
@@ -144,10 +155,10 @@ def main():
     svmr_predictions = svmr_clf.predict(testing_data_dict)
     predictions = []
     for prediction in svmr_predictions:
-        if prediction >= 0.5:
+        if prediction >= 0:
             predictions.append(1)
         else:
-            predictions.append(0)
+            predictions.append(-1)
     print("SVM-R TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R TF'] = svmr_predictions
 
@@ -211,7 +222,7 @@ def GetFinalPrediction(real_classification, predictors):
 
         if male_vote > female_vote and actual_class == 1:
             correct_classifications += 1
-        elif female_vote > male_vote and actual_class == 0:
+        elif female_vote > male_vote and actual_class == -1:
             correct_classifications += 1
         else:
             for predictor_type, predictor in predictors.items():
@@ -248,6 +259,7 @@ def LoadDataSet(path):
     data_dict['index'] = []
     data_dict['classification'] = []
     data_dict['tokenized_text'] = []
+    data_dict['tokenized_text_2'] = []
     data_dict['text'] = []
     data_dict['pos'] = []
     data_dict['wordcount'] = []
@@ -267,6 +279,7 @@ def LoadDataSet(path):
 
         #text = df['Text'][i]
         tokenized_text = df['TokenizedText'][i]
+        tokenized_text_2 = df['TokenizedText2'][i]
         text = df['TaggedPOS'][i]
         pos = df['POS'][i]
         classification = df['Classification'][i]
@@ -310,6 +323,7 @@ def LoadDataSet(path):
         data_dict['index'].append(i)
         data_dict['classification'].append(classification)
         data_dict['tokenized_text'].append(tokenized_text)
+        data_dict['tokenized_text_2'].append(tokenized_text_2)
         data_dict['text'].append(text)
         data_dict['pos'].append(pos)
         data_dict['wordcount'].append(word_count)
@@ -318,6 +332,28 @@ def LoadDataSet(path):
         data_dict['gpf'].append(gpf)
         data_dict['fa'].append(fa)
     return data_dict
+
+def ConvertToSVMLight(X, Y, path):
+    cx = coo_matrix(X)
+
+    with open(path, 'w') as file:
+        current_i = -1
+        current_line = []
+        for i, j, v in zip(cx.row, cx.col, cx.data):
+            if current_i != i:
+                if current_line:
+                    current_line_2 = sorted(current_line, key=lambda x: int(x.split(':')[0]))
+
+                    if Y[current_i] == 1:
+                        #current_line.append('+1')
+                        file.write('+1 ' + ' '.join(current_line_2) + '\n')
+                    else:
+                        #current_line.append('-1')
+                        file.write('-1 ' + ' '.join(current_line_2) + '\n')
+                current_line = []
+                current_i = i
+            current_line.append('%d:%0.16f' % (j + 1, v))
+    return
 
 if __name__ == '__main__':
     main()

@@ -10,14 +10,14 @@ from MineWordPats import MineWordPats
 
 import numpy as np
 
-def SplitData():
-    tokens = nltk.word_tokenize("can't")
-    tagged = nltk.pos_tag(tokens)
+from Helper.NLTKPreprocessor import NLTKPreprocessor
+nltk_preprocessor = NLTKPreprocessor(True)
 
+def SplitData():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
-    parser.add_argument('-m', '--mine', default=True, help ='')
+    parser.add_argument('-m', '--mine', default=False, help ='')
     opts = parser.parse_args()
     ###############################################
 
@@ -27,13 +27,14 @@ def SplitData():
 
     data_male_text = []
     data_female_text = []
+    data_left_over = []
 
     training_data_text = []
     training_data_classification = []
     testing_data_text = []
     testing_data_classification = []
 
-    # Prepare and Sanitize data - 0 = Female, 1 = Male
+    # Prepare and Sanitize data - -1 = Female, 1 = Male
     for i in range(len(df['Text'])):
         text = df['Text'][i]
         classification = df['Classification'][i]
@@ -63,19 +64,21 @@ def SplitData():
         else:
             # Female
             training_data_text.append(data_female_text[0])
-            training_data_classification.append(0)
+            training_data_classification.append(-1)
             del data_female_text[0]
 
     # Split out testing dataset
     for i in range(min(len(data_male_text), len(data_female_text))):
-        testing_data_text.append(data_male_text[i])
+        testing_data_text.append(data_male_text[0])
         testing_data_classification.append(1)
-        testing_data_text.append(data_female_text[i])
-        testing_data_classification.append(0)
+        del data_male_text[0]
+        testing_data_text.append(data_female_text[0])
+        testing_data_classification.append(-1)
+        del data_female_text[0]
 
     # Word Pattern Mining
     if opts.mine == True:
-        mine_obj = MineWordPats(training_data_text + testing_data_text, 0.05, 0.05)
+        mine_obj = MineWordPats(training_data_text + testing_data_text + data_male_text + data_female_text, 0.05, 0.05)
         pos_pats = mine_obj.MineWordPats()
 
         # Write Word Patterns to Text
@@ -90,7 +93,7 @@ def SplitData():
 
     # POS Pattern Mining
     if opts.mine == True:
-        mine_obj = MinePOSPats(training_data_text + testing_data_text, 0.3, 0.2)
+        mine_obj = MinePOSPats(training_data_text + testing_data_text + data_male_text + data_female_text, 0.3, 0.2)
         pos_pats = mine_obj.MinePOSPats()
 
         # Write POS Patterns to Text
@@ -117,6 +120,7 @@ def WriteToExcel(path, data_text, data_classification):
         worksheet.write(row, col, 'Classification'); col += 1;
         worksheet.write(row, col, 'Text'); col += 1;
         worksheet.write(row, col, 'TokenizedText'); col += 1;
+        worksheet.write(row, col, 'TokenizedText2'); col += 1;
         worksheet.write(row, col, 'POS'); col += 1;
         worksheet.write(row, col, 'TaggedPOS'); col += 1;
         worksheet.write(row, col, 'WordCount'); col += 1;
@@ -160,6 +164,7 @@ def WriteToExcel(path, data_text, data_classification):
             col = 0;
             text = data_text[i];
             tokenized_text = GetTokenizedText(text)
+            tokenized_text_2 = GetTokenizedText2(text)
             pos = GetPOS(text);
             tagged_pos = GetTaggedPOS(text);
             gpf = GetGenderPreferentialFeatures(text);
@@ -167,6 +172,7 @@ def WriteToExcel(path, data_text, data_classification):
             worksheet.write(row, col, data_classification[i]); col += 1;
             worksheet.write(row, col, text); col += 1;
             worksheet.write(row, col, tokenized_text); col += 1;
+            worksheet.write(row, col, tokenized_text_2); col += 1;
             worksheet.write(row, col, pos); col += 1;
             worksheet.write(row, col, tagged_pos); col += 1;
             worksheet.write(row, col, len(nltk.word_tokenize(text))); col += 1;
@@ -209,6 +215,11 @@ def WriteToExcel(path, data_text, data_classification):
     return
 
 def GetTokenizedText(text):
+    #tokens = nltk.word_tokenize(text)
+    tokens = nltk_preprocessor.TokenizeText(text)
+    return ' '.join(tokens)
+
+def GetTokenizedText2(text):
     tokens = nltk.word_tokenize(text)
     return ' '.join(tokens)
 

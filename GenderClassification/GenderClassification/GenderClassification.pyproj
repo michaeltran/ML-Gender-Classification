@@ -54,6 +54,9 @@
     <Compile Include="Helper\DebugPrint.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Helper\NLTKPreprocessor.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="MinePOSPats.py">
       <SubType>Code</SubType>
     </Compile>

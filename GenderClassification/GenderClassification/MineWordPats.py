@@ -3,6 +3,9 @@ import numpy as np
 
 MAX_LENGTH = 7
 
+from Helper.NLTKPreprocessor import NLTKPreprocessor
+nltk_preprocessor = NLTKPreprocessor(True)
+
 class MineWordPats(object):
     CountDict = {}
     D = []
@@ -21,7 +24,8 @@ class MineWordPats(object):
         for d_words in D_words:
             d = []
 
-            for word in nltk.word_tokenize(d_words):
+            #for word in nltk.word_tokenize(d_words):
+            for word in nltk_preprocessor.TokenizeText(d_words):
                 if word == '':
                     continue
                 d.append(word.lower())
