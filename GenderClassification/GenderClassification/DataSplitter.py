@@ -76,20 +76,20 @@ def SplitData():
         testing_data_classification.append(-1)
         del data_female_text[0]
 
-    # Word Pattern Mining
-    if opts.mine == True:
-        mine_obj = MineWordPats(training_data_text + testing_data_text + data_male_text + data_female_text, 0.05, 0.05)
-        pos_pats = mine_obj.MineWordPats()
+    ## Word Pattern Mining
+    #if opts.mine == True:
+    #    mine_obj = MineWordPats(training_data_text + testing_data_text + data_male_text + data_female_text, 0.05, 0.05)
+    #    pos_pats = mine_obj.MineWordPats()
 
-        # Write Word Patterns to Text
-        with codecs.open('data/WordPatterns.txt', 'w', encoding='utf8') as file:
-            patterns = []
-            for pos_pat in pos_pats:
-                pattern = ' '.join(pos_pat)
-                patterns.append(pattern)
-            file.write('\n'.join(patterns))
+    #    # Write Word Patterns to Text
+    #    with codecs.open('data/WordPatterns.txt', 'w', encoding='utf8') as file:
+    #        patterns = []
+    #        for pos_pat in pos_pats:
+    #            pattern = ' '.join(pos_pat)
+    #            patterns.append(pattern)
+    #        file.write('\n'.join(patterns))
 
-    print()
+    #print()
 
     # POS Pattern Mining
     if opts.mine == True:

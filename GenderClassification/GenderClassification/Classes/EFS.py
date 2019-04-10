@@ -242,7 +242,6 @@ class EFS(object):
         Xi = []
         for feature_selection in feature_selections:
             if FSC.CHI == feature_selection:
-                #Xi.append(chi2(X, Y)[0])
                 Xi.append(self.ChiSquared(X_dense, Y_mask))
             elif FSC.IG == feature_selection:
                 Xi.append(self.InformationGain(X_dense, Y_mask))
@@ -253,6 +252,7 @@ class EFS(object):
             elif FSC.WOE == feature_selection:
                 Xi.append(self.WeightOfEvidenceForText(X_dense, Y_mask))
 
+        #Xi.append(chi2(X, Y)[0])
         #Xi.append(self.ChiSquared(X_dense, Y))
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
 
@@ -304,7 +304,7 @@ class EFS(object):
             cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy')
             scores.append(cv_scores.mean())
             DebugPrint("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
-            #print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
+            print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 
         best_score_index = scores.index(max(scores))
         best_score = scores[best_score_index]

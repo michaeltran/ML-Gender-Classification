@@ -74,6 +74,22 @@ def main():
     #print("NB DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
     #predictors['NB DEFAULT'] = nb_predictions
 
+    #ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool-bagging')
+    #ensemble_predictions = ensemble_clf.predict(testing_data_dict)
+    #print("ENSEMBLE BAGGING Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], ensemble_predictions)))
+    #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
+
+    ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete-bagging-r')
+    ensemble_predictions = ensemble_clf.predict(testing_data_dict)
+    predictions = []
+    for prediction in ensemble_predictions:
+        if prediction >= 0:
+            predictions.append(1)
+        else:
+            predictions.append(-1)
+    print("ENSEMBLE-R Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    predictors['ENSEMBLE BAGGING'] = ensemble_predictions
+
     ## Naive Bayes ################################
     print("### Naive Bayes ###")
     nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
@@ -176,21 +192,21 @@ def main():
     print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
 
     print(predictor_score)
-    print("Removing worst predictor: " + predictor_score[0][0])
+    print("Removing worst predictor: " + predictor_score[0][0] + '\n')
     del predictors[predictor_score[0][0]]
 
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
     print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
     
     print(predictor_score)
-    print("Removing worst predictor: " + predictor_score[0][0])
+    print("Removing worst predictor: " + predictor_score[0][0] + '\n')
     del predictors[predictor_score[0][0]]
 
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
     print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
     
     print(predictor_score)
-    print("Removing worst predictor: " + predictor_score[0][0])
+    print("Removing worst predictor: " + predictor_score[0][0] + '\n')
     del predictors[predictor_score[0][0]]
 
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
@@ -208,7 +224,8 @@ def GetFinalPrediction(real_classification, predictors):
     for predictor_type, predictor in predictors.items():
         predictor_score[predictor_type] = 0
 
-    correct_classifications = 0
+    correct_classifications_male = 0
+    correct_classifications_female = 0
     for i in range(len(real_classification)):
         actual_class = real_classification[i]
         male_vote = 0
@@ -221,22 +238,25 @@ def GetFinalPrediction(real_classification, predictors):
                 female_vote += 1
 
         if male_vote > female_vote and actual_class == 1:
-            correct_classifications += 1
+            correct_classifications_male += 1
         elif female_vote > male_vote and actual_class == -1:
-            correct_classifications += 1
+            correct_classifications_female += 1
         else:
             for predictor_type, predictor in predictors.items():
                 if predictor[i] != actual_class:
                     predictor_score[predictor_type]+= 1
+
         if male_vote == female_vote:
             #print('Tie Breaker, Guess Male')
             if actual_class == 1:
-                correct_classifications += 1
+                correct_classifications_male += 1
                 for predictor_type, predictor in predictors.items():
                     if predictor[i] != actual_class:
                         predictor_score[predictor_type] += 1
 
-    return correct_classifications, [(k, predictor_score[k]) for k in sorted(predictor_score, key=predictor_score.get, reverse=True)]
+    print('Correct Male: %d - Corrent Female: %d' % (correct_classifications_male, correct_classifications_female))
+
+    return correct_classifications_male + correct_classifications_female, [(k, predictor_score[k]) for k in sorted(predictor_score, key=predictor_score.get, reverse=True)]
 
 
 def CrossValidationTest(X, pos_pattern_vocab):
