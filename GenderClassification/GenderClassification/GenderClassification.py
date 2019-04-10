@@ -254,7 +254,7 @@ def GetFinalPrediction(real_classification, predictors):
                     if predictor[i] != actual_class:
                         predictor_score[predictor_type] += 1
 
-    print('Correct Male: %d - Corrent Female: %d' % (correct_classifications_male, correct_classifications_female))
+    print('Correct Male: %d - Correct Female: %d' % (correct_classifications_male, correct_classifications_female))
 
     return correct_classifications_male + correct_classifications_female, [(k, predictor_score[k]) for k in sorted(predictor_score, key=predictor_score.get, reverse=True)]
 

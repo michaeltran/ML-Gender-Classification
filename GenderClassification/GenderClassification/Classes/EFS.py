@@ -304,7 +304,7 @@ class EFS(object):
             cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy')
             scores.append(cv_scores.mean())
             DebugPrint("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
-            print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
+            #print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 
         best_score_index = scores.index(max(scores))
         best_score = scores[best_score_index]
