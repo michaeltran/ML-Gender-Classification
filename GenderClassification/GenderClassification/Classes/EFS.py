@@ -23,29 +23,29 @@ class EFS(object):
             w, x, y, z = self.ContingencyTableDict[feature]
         else:
             # Full Array
-            feature_column = X[:,feature]
-            X_When_Y_1 = np.extract(Y, feature_column)
-            temp = np.where(X_When_Y_1 > 0)
-            w = float(temp[0].size)
+            #feature_column = X[:,feature]
+            #X_When_Y_1 = np.extract(Y, feature_column)
+            #temp = np.where(X_When_Y_1 > 0)
+            #w = float(temp[0].size)
 
-            temp = np.where(feature_column > 0)
-            x = float(temp[0].size - w)
+            #temp = np.where(feature_column > 0)
+            #x = float(temp[0].size - w)
 
-            temp = np.where(X_When_Y_1 == 0)
-            y = float(temp[0].size)
+            #temp = np.where(X_When_Y_1 == 0)
+            #y = float(temp[0].size)
 
-            temp = np.where(feature_column == 0)
-            z = float(temp[0].size - y)
+            #temp = np.where(feature_column == 0)
+            #z = float(temp[0].size - y)
 
             # Sparse Array
-            #indices = np.where(Y)[0]
-            #feature_column = X[:,feature]
-            #X_When_Y_1 = feature_column[indices,:]
+            indices = np.where(Y)[0]
+            feature_column = X[:,feature]
+            X_When_Y_1 = feature_column[indices,:]
 
-            #w = float(X_When_Y_1.nnz)
-            #x = float(feature_column.nnz - w)
-            #y = float(X_When_Y_1.shape[0] - w)
-            #z = float(feature_column.shape[0] - feature_column.nnz - y)
+            w = float(X_When_Y_1.nnz)
+            x = float(feature_column.nnz - w)
+            y = float(X_When_Y_1.shape[0] - w)
+            z = float(feature_column.shape[0] - feature_column.nnz - y)
 
             self.ContingencyTableDict.append((w, x, y, z))
 
@@ -230,10 +230,12 @@ class EFS(object):
     def EFS(self, X, Y, classifier, feature_selections):
         self.ContingencyTableDict = []
 
-        if issparse(X):
-            X_dense = X.toarray()
-        else:
-            X_dense = X
+        #if issparse(X):
+        #    X_dense = X.toarray()
+        #else:
+        #    X_dense = X
+
+        X_dense = X
 
         Y_mask = np.array(Y)
         Y_mask[Y_mask < 0] = 0
@@ -304,7 +306,7 @@ class EFS(object):
             cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy')
             scores.append(cv_scores.mean())
             DebugPrint("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
-            #print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
+            print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
 
         best_score_index = scores.index(max(scores))
         best_score = scores[best_score_index]

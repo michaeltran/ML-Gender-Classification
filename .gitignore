@@ -263,3 +263,4 @@ __pycache__/
 # Custom Ignore
 GenderClassification/GenderClassification/data/model
 GenderClassification/GenderClassification/data/predictions
+GenderClassification/GenderClassification/data/blogs

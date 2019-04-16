@@ -27,5 +27,11 @@ svm_classify TestSVMLight.txt model predictions
 
 
 cls
-svm_learn -z r -j 1 -t 0 TrainSVMLight.txt model
+svm_learn -z r -j 1.1 -c 1000 -t 0 TrainSVMLight.txt model
+svm_classify TestSVMLight.txt model predictions
+
+
+
+cls
+svm_learn -z r -j 1 -c 10 -g 1 -t 2 TrainSVMLight.txt model
 svm_classify TestSVMLight.txt model predictions

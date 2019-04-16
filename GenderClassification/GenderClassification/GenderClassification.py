@@ -79,16 +79,16 @@ def main():
     #print("ENSEMBLE BAGGING Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], ensemble_predictions)))
     #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
 
-    ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete-bagging-r')
-    ensemble_predictions = ensemble_clf.predict(testing_data_dict)
-    predictions = []
-    for prediction in ensemble_predictions:
-        if prediction >= 0:
-            predictions.append(1)
-        else:
-            predictions.append(-1)
-    print("ENSEMBLE-R Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
-    predictors['ENSEMBLE BAGGING'] = ensemble_predictions
+    #ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete-bagging-r')
+    #ensemble_predictions = ensemble_clf.predict(testing_data_dict)
+    #predictions = []
+    #for prediction in ensemble_predictions:
+    #    if prediction >= 0:
+    #        predictions.append(1)
+    #    else:
+    #        predictions.append(-1)
+    #print("ENSEMBLE-R Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
 
     ## Naive Bayes ################################
     print("### Naive Bayes ###")
@@ -297,10 +297,10 @@ def LoadDataSet(path):
         for j in range(23):
             fa.append(0)
 
-        #text = df['Text'][i]
-        tokenized_text = df['TokenizedText'][i]
-        tokenized_text_2 = df['TokenizedText2'][i]
-        text = df['TaggedPOS'][i]
+        #text = str(df['Text'][i])
+        tokenized_text = str(df['TokenizedText'][i])
+        tokenized_text_2 = str(df['TokenizedText2'][i])
+        text = str(df['TaggedPOS'][i])
         pos = df['POS'][i]
         classification = df['Classification'][i]
         word_count = df['WordCount'][i]

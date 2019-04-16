@@ -110,14 +110,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -168,14 +168,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                         ('scaler', MaxAbsScaler()),
                     ])),
                     ('pipeline2', Pipeline([
@@ -224,14 +224,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -282,14 +282,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -509,10 +509,10 @@ class Classifier(object):
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = LinearSVC(max_iter=100000)
-            parameters = [
-                    {'C': [0.1, 1, 2, 3, 4, 5]},
-                ]
-            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
+            #parameters = [
+            #        {'C': [0.1, 1, 2, 3, 4, 5]},
+            #    ]
+            #final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -551,20 +551,20 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
                     ])),
                 ])),
-                ('clf', final_classifier),
+                ('clf', classifier),
             ])
         elif svm_type == 'tf': 
             # TF 1-GRAM [ALL] - 0.74 ACC
@@ -582,26 +582,26 @@ class Classifier(object):
             final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=-1)
 
             features1 = FeatureUnion([
-                    #('pos', Pipeline([
-                    #    ('selector', ItemSelector(key='pos')),
-                    #    ('vectorizer', pos_vectorizer),
-                    #    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #])),
+                    ('pos', Pipeline([
+                        ('selector', ItemSelector(key='pos')),
+                        ('vectorizer', pos_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                    ])),
                     ('text', Pipeline([
                         ('selector', ItemSelector(key='tokenized_text')),
                         ('vectorizer', text_vectorizer),
                         ('tfidf', TfidfTransformer(use_idf=True)),
                     ])),
-                    #('gpf', Pipeline([
-                    #    ('selector', ItemSelector(key='gpf')),
-                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                    #    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #])),
-                    #('fa', Pipeline([
-                    #    ('selector', ItemSelector(key='fa')),
-                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                    #    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #])),
+                    ('gpf', Pipeline([
+                        ('selector', ItemSelector(key='gpf')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                    ])),
+                    ('fa', Pipeline([
+                        ('selector', ItemSelector(key='fa')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                    ])),
                 ])
 
             features2 = FeatureUnion([
@@ -615,14 +615,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -1112,14 +1112,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),

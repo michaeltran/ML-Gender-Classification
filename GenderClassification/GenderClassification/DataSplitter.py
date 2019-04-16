@@ -3,6 +3,9 @@ import argparse
 import xlsxwriter
 import pandas as pd
 import codecs
+import os
+import re
+from xml.dom import minidom
 from random import shuffle
 
 from MinePOSPats import MinePOSPats
@@ -17,7 +20,7 @@ def SplitData():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
-    parser.add_argument('-m', '--mine', default=False, help ='')
+    parser.add_argument('-m', '--mine', default=True, help ='')
     opts = parser.parse_args()
     ###############################################
 
@@ -47,6 +50,11 @@ def SplitData():
             else:
                 print('Classification Error: %s is not defined.' % (classification))
                 return
+
+    blog_male_data, blog_female_data = GetBlogAuthorshipCorpusData('')
+
+    data_male_text = data_male_text + blog_male_data
+    data_female_text = data_female_text + blog_female_data
 
     shuffle(data_male_text)
     shuffle(data_female_text)
@@ -396,6 +404,50 @@ def GetFactorAnalysis(text):
             if word in words_in_factor[i]:
                 f[i] += 1
     return f
+
+def GetBlogAuthorshipCorpusData(path):
+    #for file_name in os.listdir('data/blogs'):
+    #    cleaned_file = ''
+    #    with open('data/blogs/' + file_name) as file:
+    #        for line in file:
+
+    male_data = []
+    female_data = []
+
+    for file_name in os.listdir('data/blogs'):
+        gender = re.findall("[0-9]*\.(.*)\.[0-9]+\..*\.xml", file_name)[0]
+        try:
+            mydoc = minidom.parse('data/blogs/' + file_name)
+            posts = mydoc.getElementsByTagName('post')
+            #print(posts[1].firstChild.data)
+
+            for post in posts:
+                text = post.firstChild.data
+                text = text.replace('\n', '').replace('\t', '').strip()
+                if len(text) < 100:
+                    continue
+                if gender == 'male':
+                    male_data.append(text)
+                elif gender == 'female':
+                    female_data.append(text)
+                else:
+                    print(gender)
+
+            #entire_text = ''
+
+            #for post in posts:
+            #    text = post.firstChild.data
+            #    text = text.replace('\n', '').replace('\t', '').strip()
+            #    entire_text = entire_text + text + '\n'
+
+            #if gender == 'male':
+            #    male_data.append(entire_text)
+            #elif gender == 'female':
+            #    female_data.append(entire_text)
+        except:
+            print("Skipped: " + file_name)
+
+    return male_data, female_data
 
 if __name__ == '__main__':
     SplitData()
