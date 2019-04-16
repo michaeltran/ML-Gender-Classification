@@ -1,4 +1,5 @@
 import numpy as np
+import random
 from scipy.sparse import issparse
 
 from sklearn.naive_bayes import MultinomialNB
@@ -23,29 +24,29 @@ class EFS(object):
             w, x, y, z = self.ContingencyTableDict[feature]
         else:
             # Full Array
-            #feature_column = X[:,feature]
-            #X_When_Y_1 = np.extract(Y, feature_column)
-            #temp = np.where(X_When_Y_1 > 0)
-            #w = float(temp[0].size)
-
-            #temp = np.where(feature_column > 0)
-            #x = float(temp[0].size - w)
-
-            #temp = np.where(X_When_Y_1 == 0)
-            #y = float(temp[0].size)
-
-            #temp = np.where(feature_column == 0)
-            #z = float(temp[0].size - y)
-
-            # Sparse Array
-            indices = np.where(Y)[0]
             feature_column = X[:,feature]
-            X_When_Y_1 = feature_column[indices,:]
+            X_When_Y_1 = np.extract(Y, feature_column)
+            temp = np.where(X_When_Y_1 > 0)
+            w = float(temp[0].size)
 
-            w = float(X_When_Y_1.nnz)
-            x = float(feature_column.nnz - w)
-            y = float(X_When_Y_1.shape[0] - w)
-            z = float(feature_column.shape[0] - feature_column.nnz - y)
+            temp = np.where(feature_column > 0)
+            x = float(temp[0].size - w)
+
+            temp = np.where(X_When_Y_1 == 0)
+            y = float(temp[0].size)
+
+            temp = np.where(feature_column == 0)
+            z = float(temp[0].size - y)
+
+            ## Sparse Array
+            #indices = np.where(Y)[0]
+            #feature_column = X[:,feature]
+            #X_When_Y_1 = feature_column[indices,:]
+
+            #w = float(X_When_Y_1.nnz)
+            #x = float(feature_column.nnz - w)
+            #y = float(X_When_Y_1.shape[0] - w)
+            #z = float(feature_column.shape[0] - feature_column.nnz - y)
 
             self.ContingencyTableDict.append((w, x, y, z))
 
@@ -227,19 +228,28 @@ class EFS(object):
             WET.append(WET_)
         return WET
 
+    def RandomSampleX(self, X, Y):
+        indices = []
+
+        indices = random.sample(range(0, X.shape[0]), min(X.shape[0], 1000))
+        new_X = X[indices,:]
+        new_Y = [Y[i] for i in indices]
+
+        return new_X, new_Y
+
     def EFS(self, X, Y, classifier, feature_selections):
         self.ContingencyTableDict = []
 
-        #if issparse(X):
-        #    X_dense = X.toarray()
-        #else:
-        #    X_dense = X
-
-        X_dense = X
-
+        # Create Y_mask (Convert -1 to 0)
         Y_mask = np.array(Y)
         Y_mask[Y_mask < 0] = 0
         Y_mask = Y_mask.tolist()
+
+        if issparse(X):
+            X_dense, Y_mask = self.RandomSampleX(X, Y_mask)
+            X_dense = X_dense.toarray()
+        else:
+            X_dense = X
 
         Xi = []
         for feature_selection in feature_selections:

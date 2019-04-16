@@ -92,10 +92,10 @@ def main():
 
     ## Naive Bayes ################################
     print("### Naive Bayes ###")
-    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
-    nb_predictions = nb_clf.predict(testing_data_dict)
-    print("NB TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-    predictors['NB TF'] = nb_predictions
+    #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    #nb_predictions = nb_clf.predict(testing_data_dict)
+    #print("NB TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    #predictors['NB TF'] = nb_predictions
 
     nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
     nb_predictions = nb_clf.predict(testing_data_dict)

@@ -57,9 +57,9 @@ from Helper.DebugPrint import DebugPrint
 class Classifier(object):
     def GetFeatures(self, training_data_dict, training_data_classification, vectorizer_pipeline, classifier, feature_selections):
         start = time.time()
+        efs_obj = EFS()
 
         X = vectorizer_pipeline.fit_transform(training_data_dict, training_data_classification)
-        efs_obj = EFS()
         candidate_feature_indexes = efs_obj.EFS(X, training_data_classification, classifier, feature_selections)
 
         end = time.time()
@@ -168,14 +168,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            #reducer = ColumnExtractor(cols=reducer_features)
+            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        #('reducer', reducer),
+                        ('reducer', reducer),
                         ('scaler', MaxAbsScaler()),
                     ])),
                     ('pipeline2', Pipeline([
@@ -224,14 +224,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            #reducer = ColumnExtractor(cols=reducer_features)
+            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        #('reducer', reducer),
+                        ('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -282,14 +282,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
-            #reducer = ColumnExtractor(cols=reducer_features)
+            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG])
+            reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        #('reducer', reducer),
+                        ('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
