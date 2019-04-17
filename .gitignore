@@ -264,3 +264,5 @@ __pycache__/
 GenderClassification/GenderClassification/data/model
 GenderClassification/GenderClassification/data/predictions
 GenderClassification/GenderClassification/data/blogs
+GenderClassification/GenderClassification/data/TrainSVMLight.txt
+GenderClassification/GenderClassification/data/TestSVMLight.txt
