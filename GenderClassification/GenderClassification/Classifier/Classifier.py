@@ -126,11 +126,20 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif nb_type == 'tf': 
-            ## TF - 1-GRAM [CHI, IG] [ALL] (0.69 ACC)
+            ## TF - 1-GRAM [CHI, IG] [ALL] (0.716 ACC)
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = MultinomialNB()
+
+            #text_pipeline = Pipeline([
+            #    ('selector', ItemSelector(key='tokenized_text')),
+            #    ('vectorizer', text_vectorizer),
+            #    ('tfidf', TfidfTransformer(use_idf=True)),
+            #])
+
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, text_pipeline, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -142,6 +151,7 @@ class Classifier(object):
                         ('selector', ItemSelector(key='tokenized_text')),
                         ('vectorizer', text_vectorizer),
                         ('tfidf', TfidfTransformer(use_idf=True)),
+                        #('reducer', reducer),
                     ])),
                     ('gpf', Pipeline([
                         ('selector', ItemSelector(key='gpf')),
@@ -186,7 +196,7 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif nb_type == 'discrete': 
-            ## Discrete 2-GRAM [ALL] 0.67 ACC
+            ## Discrete 2-GRAM [ALL] 0.675 ACC
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(2, 2), lowercase=True, tokenizer=lambda x: x.split(' '))
 
@@ -240,7 +250,7 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif nb_type == 'bool': 
-            ## Bool - 2-GRAM [CHI, IG] (0.92 CV, 0.70 ACC)
+            ## Bool - 2-GRAM [CHI, IG] (0.92 CV, 0.697 ACC)
             # Changing features2 to smaller bin or using MaxAbsScaler() does nothing
             # Changed to tokenized_text which lowered accuracy
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False, binary=True)

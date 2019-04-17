@@ -273,24 +273,24 @@ class EFS(object):
         del self.ContingencyTableDict
 
         t = len(Xi)                     # number of feature scoring algorithms
-        if X.shape[1] > 500:
-            w = int(X.shape[1]/100)     # window size
-            tau_i = int(X.shape[1]/20)  # tau
-            step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
-        else:
-            w = int(X.shape[1]/10)
-            tau_i = int(X.shape[1]/2)
-            step_size = 1
+        #if X.shape[1] > 500:
+        #    w = int(X.shape[1]/100)     # window size
+        #    tau_i = int(X.shape[1]/20)  # tau
+        #    step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
+        #else:
+        #    w = int(X.shape[1]/10)
+        #    tau_i = int(X.shape[1]/2)
+        #    step_size = 1
 
-        #w = int(X.shape[1]/25)
-        #tau_i = int(X.shape[1]/2)
-        #step_size = int(w / 20)
+        w = int(X.shape[1]/2) - 1
+        tau_i = int(X.shape[1]/2)
+        step_size = int(w / 20)
 
         C = []
         for i in range(0, t):
             C_i = []
             iterator = 0
-            for tau in range(tau_i-w, tau_i+w):
+            for tau in range(tau_i-w, tau_i+w+1):
                 if (iterator % step_size == 0):
                     zeta_i = np.argsort(Xi[i])[-tau:]
                     #zeta_i = np.argsort(Xi[i])[:tau]

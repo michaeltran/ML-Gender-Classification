@@ -92,19 +92,19 @@ def main():
 
     ## Naive Bayes ################################
     print("### Naive Bayes ###")
-    #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
-    #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-    #predictors['NB TF'] = nb_predictions
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("NB TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    predictors['NB TF'] = nb_predictions
 
     nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
     nb_predictions = nb_clf.predict(testing_data_dict)
-    print("NB DISCRETE Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    print("NB DISCRETE Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
     predictors['NB DISCRETE'] = nb_predictions
 
     nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
     nb_predictions = nb_clf.predict(testing_data_dict)
-    print("NB BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    print("NB BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
     predictors['NB BOOL'] = nb_predictions
 
     #CrossValidationTest(training_data_dict, pos_pattern_vocab)
@@ -114,12 +114,12 @@ def main():
     print("### SVM ###")
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
     svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    print("SVM BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM BOOL'] = svm_predictions
 
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
     svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM TF'] = svm_predictions
 
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'svmlight-tf')
@@ -129,17 +129,17 @@ def main():
     X = feats.transform(testing_data_dict)
     ConvertToSVMLight(X, testing_data_dict['classification'], 'data/TestSVMLight.txt')
     svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM LIGHT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    print("SVM LIGHT Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM LIGHT'] = svm_predictions
 
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
     svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM DISCRETE Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    print("SVM DISCRETE Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM DISCRETE'] = svm_predictions
 
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'svc')
     svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM SVC Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    print("SVM SVC Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM SVC'] = svm_predictions
     ###############################################
 
@@ -153,7 +153,7 @@ def main():
             predictions.append(1)
         else:
             predictions.append(-1)
-    print("SVM-R LINEAR DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVM-R LINEAR DEFAULT Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R LINEAR'] = svmr_predictions
 
     svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
@@ -164,7 +164,7 @@ def main():
             predictions.append(1)
         else:
             predictions.append(-1)
-    print("SVM-R BOOL Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVM-R BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R BOOL'] = svmr_predictions
 
     svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
@@ -175,7 +175,7 @@ def main():
             predictions.append(1)
         else:
             predictions.append(-1)
-    print("SVM-R TF Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
+    print("SVM-R TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R TF'] = svmr_predictions
 
     ## Cross Validation
@@ -189,28 +189,28 @@ def main():
 
     ## Test Model #################################
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
-    print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
+    print("FINAL Accuracy: %0.3f" % (correct_classifications / len(testing_data_dict['classification'])))
 
     print(predictor_score)
     print("Removing worst predictor: " + predictor_score[0][0] + '\n')
     del predictors[predictor_score[0][0]]
 
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
-    print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
+    print("FINAL Accuracy: %0.3f" % (correct_classifications / len(testing_data_dict['classification'])))
     
     print(predictor_score)
     print("Removing worst predictor: " + predictor_score[0][0] + '\n')
     del predictors[predictor_score[0][0]]
 
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
-    print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
+    print("FINAL Accuracy: %0.3f" % (correct_classifications / len(testing_data_dict['classification'])))
     
     print(predictor_score)
     print("Removing worst predictor: " + predictor_score[0][0] + '\n')
     del predictors[predictor_score[0][0]]
 
     correct_classifications, predictor_score = GetFinalPrediction(testing_data_dict['classification'], predictors)
-    print("FINAL Accuracy: %0.2f" % (correct_classifications / len(testing_data_dict['classification'])))
+    print("FINAL Accuracy: %0.3f" % (correct_classifications / len(testing_data_dict['classification'])))
     print(predictor_score)
     print()
 
