@@ -1,4 +1,7 @@
 import nltk
+from flair.data import Sentence
+from flair.models import SequenceTagger
+
 import argparse
 import xlsxwriter
 import pandas as pd
@@ -12,9 +15,14 @@ from MinePOSPats import MinePOSPats
 from MineWordPats import MineWordPats
 
 import numpy as np
+import multiprocessing as mp
+
+TAGGER = SequenceTagger.load('pos')
 
 from Helper.NLTKPreprocessor import NLTKPreprocessor
 nltk_preprocessor = NLTKPreprocessor(True)
+
+POS_DICTIONARY = {}
 
 def SplitData():
     ## Get Command-line Arguments #################
@@ -23,6 +31,8 @@ def SplitData():
     parser.add_argument('-m', '--mine', default=True, help ='')
     opts = parser.parse_args()
     ###############################################
+
+    LoadPOSExcel('data/pos.xlsx')
 
     ## Build the Training Set and Testing Set #####
     names = ['Text', 'Classification']
@@ -51,13 +61,36 @@ def SplitData():
                 print('Classification Error: %s is not defined.' % (classification))
                 return
 
-    blog_male_data, blog_female_data = GetBlogAuthorshipCorpusData('')
-
-    data_male_text = data_male_text + blog_male_data
-    data_female_text = data_female_text + blog_female_data
+    #blog_male_data, blog_female_data = GetBlogAuthorshipCorpusData('')
+    #data_male_text = data_male_text + blog_male_data
+    #data_female_text = data_female_text + blog_female_data
 
     shuffle(data_male_text)
     shuffle(data_female_text)
+
+    GetPOSTags(data_male_text)
+    GetPOSTags(data_female_text)
+
+    WritePOSToExcel('data/pos.xlsx')
+
+    # POS Pattern Mining
+    if opts.mine == True:
+        pos_list = []
+        for text in data_male_text:
+            pos_list.append(GetPOSTag(text))
+        for text in data_female_text:
+            pos_list.append(GetPOSTag(text))
+
+        mine_obj = MinePOSPats(pos_list, 0.3, 0.2)
+        pos_pats = mine_obj.MinePOSPats()
+
+        # Write POS Patterns to Text
+        with open('data/POSPatterns.txt', 'w') as file:
+            patterns = []
+            for pos_pat in pos_pats:
+                pattern = ' '.join(pos_pat)
+                patterns.append(pattern)
+            file.write('\n'.join(patterns))
 
     # Split out training dataset
     len_data = 0
@@ -97,21 +130,6 @@ def SplitData():
     #            patterns.append(pattern)
     #        file.write('\n'.join(patterns))
 
-    #print()
-
-    # POS Pattern Mining
-    if opts.mine == True:
-        mine_obj = MinePOSPats(training_data_text + testing_data_text + data_male_text + data_female_text, 0.3, 0.2)
-        pos_pats = mine_obj.MinePOSPats()
-
-        # Write POS Patterns to Text
-        with open('data/POSPatterns.txt', 'w') as file:
-            patterns = []
-            for pos_pat in pos_pats:
-                pattern = ' '.join(pos_pat)
-                patterns.append(pattern)
-            file.write('\n'.join(patterns))
-
     # Save Training Data
     WriteToExcel('data/train_data.xlsx', training_data_text, training_data_classification)
 
@@ -121,7 +139,7 @@ def SplitData():
     print("Completed")
 
 def WriteToExcel(path, data_text, data_classification):
-    with xlsxwriter.Workbook(path) as workbook:
+    with xlsxwriter.Workbook(path, {'strings_to_urls': False}) as workbook:
         worksheet = workbook.add_worksheet();
         row = 0;
         col = 0;
@@ -223,7 +241,7 @@ def WriteToExcel(path, data_text, data_classification):
     return
 
 def GetTokenizedText(text):
-    #tokens = nltk.word_tokenize(text)
+    tokens = nltk.word_tokenize(text)
     tokens = nltk_preprocessor.TokenizeText(text)
     return ' '.join(tokens)
 
@@ -232,28 +250,21 @@ def GetTokenizedText2(text):
     return ' '.join(tokens)
 
 def GetPOS(text):
-    tokens = nltk.word_tokenize(text)
-    tagged = nltk.pos_tag(tokens)
-    pos_text = []
-
-    for (a,b) in tagged:
-        pos_text.append('%s' % (b))
-
+    pos_text = GetPOSTag(text)
     return ' '.join(pos_text)
 
 def GetTaggedPOS(text):
-    tokens = nltk.word_tokenize(text)
-    tagged = nltk.pos_tag(tokens)
-    pos_text = []
+    pos_text = GetPOSTag(text)
+    sentence = Sentence(text, use_tokenizer=True)
 
+    ## T O D O
     for (a,b) in tagged:
         pos_text.append('%s_%s' % (a, b))
 
     return ' '.join(pos_text)
 
 def GetFMeasure(text):
-    tokens = nltk.word_tokenize(text)
-    tagged = nltk.pos_tag(tokens)
+    tagged = GetPOSTag(text)
 
     freq = {}
     freq['noun'] = 0
@@ -267,7 +278,7 @@ def GetFMeasure(text):
 
     count = 0
     for i in range(len(tagged)):
-        pos = tagged[i][1]
+        pos = tagged[i]
         if pos in ['NN', 'NNS', 'NNP', 'NNPS']:
             freq['noun'] += 1
         elif pos in ['JJ', 'JJR', 'JJS']:
@@ -448,6 +459,51 @@ def GetBlogAuthorshipCorpusData(path):
             print("Skipped: " + file_name)
 
     return male_data, female_data
+
+def GetPOSTag(d_words):
+    if d_words in POS_DICTIONARY:
+        return POS_DICTIONARY[d_words]
+    else:
+        d = []
+
+        sentence = Sentence(d_words, use_tokenizer=True)
+        TAGGER.predict(sentence)
+        for token in sentence:
+            pos = token.get_tag('pos').value
+            d.append(pos)
+
+        POS_DICTIONARY[d_words] = d
+        print(len(POS_DICTIONARY))
+        return d
+
+def GetPOSTags(D_words):
+    for d_words in D_words:
+        GetPOSTag(d_words)
+    return
+
+def WritePOSToExcel(path):
+    with xlsxwriter.Workbook(path, {'strings_to_urls': False}) as workbook:
+        worksheet = workbook.add_worksheet();
+        row = 0;
+        col = 0;
+        worksheet.write(row, col, 'Text'); col += 1;
+        worksheet.write(row, col, 'POS'); col += 1;
+        row += 1;
+        for key in POS_DICTIONARY:
+            col = 0
+            worksheet.write(row, col, key); col += 1;
+            worksheet.write(row, col, ' '.join(POS_DICTIONARY[key])); col += 1;
+            row += 1;
+    return
+
+def LoadPOSExcel(path):
+    if os.path.isfile(path):
+        df = pd.read_excel(path, usecols=range(0, 50))
+        for i in range(len(df['Text'])):
+            text = str(df['Text'][i])
+            pos = str(df['POS'][i])
+            POS_DICTIONARY[text] = [str(x) for x in pos.split(' ')]
+    return
 
 if __name__ == '__main__':
     SplitData()

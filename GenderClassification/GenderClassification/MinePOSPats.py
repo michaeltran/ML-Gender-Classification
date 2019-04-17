@@ -1,4 +1,3 @@
-import nltk
 import numpy as np
 
 MAX_LENGTH = 7
@@ -10,34 +9,43 @@ class MinePOSPats(object):
     minSupport = 0
     minAdherence = 0
 
-    def __init__(self, D_words, minSupport, minAdherence):
-        #self.D = self.ConvertToPOS(D_words)
-        #self.T = self.GetAllPossiblePOS(self.D)
-        self.D, self.T = self.ConvertToPOS(D_words)
+    def __init__(self, D, minSupport, minAdherence):
+        self.D = D
+        self.T = self.GetAllPossiblePOS(self.D)
         self.minSupport = int(len(self.D) * minSupport)
         self.minAdherence = minAdherence
 
-    def ConvertToPOS(self, D_words):
-        D = []
-        T = []
-        for d_words in D_words:
-            d = []
-            tokens = nltk.word_tokenize(d_words)
-            tagged = nltk.pos_tag(tokens)
-            for (word, pos) in tagged:
-                d.append(pos)
-                if pos not in T:
-                    T.append(pos)
-            D.append(d)
-        return D, T
-
-    #def GetAllPossiblePOS(self, D):
+    #def ConvertToPOS(self, D_words):
+    #    D = []
     #    T = []
-    #    for d in D:
-    #        for tag in d:
-    #            if tag not in T:
-    #                T.append(tag)
-    #    return T
+    #    for d_words in D_words:
+    #        d = []
+
+    #        sentence = Sentence(d_words, use_tokenizer=True)
+    #        TAGGER.predict(sentence)
+    #        for token in sentence:
+    #            pos = token.get_tag('pos').value
+    #            d.append(pos)
+    #            if pos not in T:
+    #                T.append(pos)
+
+    #        #tokens = nltk.word_tokenize(d_words)
+    #        #tagged = nltk.pos_tag(tokens)
+    #        #for (word, pos) in tagged:
+    #        #    d.append(pos)
+    #        #    if pos not in T:
+    #        #        T.append(pos)
+    #        D.append(d)
+    #        print(len(D))
+    #    return D, T
+
+    def GetAllPossiblePOS(self, D):
+        T = []
+        for d in D:
+            for tag in d:
+                if tag not in T:
+                    T.append(tag)
+        return T
 
     def MinePOSPats(self):
         print('Start POS Mining')

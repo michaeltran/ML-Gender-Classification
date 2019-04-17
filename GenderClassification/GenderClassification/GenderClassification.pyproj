@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>368390ec-9e9f-45ab-8f29-8c6d844beff7</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>GenderClassification.py</StartupFile>
+    <StartupFile>DataSplitter.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
