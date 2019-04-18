@@ -581,7 +581,7 @@ class Classifier(object):
             # 2/3-gram lowers accuracy
             # [CHI, IG] lower accuracy than [ALL] TO DO: TEST
             # Higher accuracy without POS/GPF/FA TO DO: TEST
-            pos_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 3), tokenizer=lambda x: x.split(' '), lowercase=False)
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = LinearSVC(max_iter=100000)
