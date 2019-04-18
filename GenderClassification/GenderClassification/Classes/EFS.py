@@ -231,7 +231,7 @@ class EFS(object):
     def RandomSampleX(self, X, Y):
         indices = []
 
-        indices = random.sample(range(0, X.shape[0]), min(X.shape[0], 1000))
+        indices = random.sample(range(0, X.shape[0]), min(X.shape[0], 2000))
         new_X = X[indices,:]
         new_Y = [Y[i] for i in indices]
 
@@ -284,13 +284,13 @@ class EFS(object):
 
         w = int(X.shape[1]/2) - 1
         tau_i = int(X.shape[1]/2)
-        step_size = int(w / 20)
+        step_size = int(w / 10)
 
         C = []
         for i in range(0, t):
             C_i = []
             iterator = 0
-            for tau in range(tau_i-w, tau_i+w+1):
+            for tau in range(tau_i-w, tau_i+w):
                 if (iterator % step_size == 0):
                     zeta_i = np.argsort(Xi[i])[-tau:]
                     #zeta_i = np.argsort(Xi[i])[:tau]
@@ -313,7 +313,7 @@ class EFS(object):
         for i in range(len(OptCandFeatures)):
             candidate_feature_indexes = OptCandFeatures[i]
             candidate_features = X[:,candidate_feature_indexes]
-            cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy')
+            cv_scores = cross_val_score(classifier, candidate_features, Y, cv=10, scoring='accuracy', n_jobs=5)
             scores.append(cv_scores.mean())
             DebugPrint("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))
             print("%d - Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (i, cv_scores.mean(), cv_scores.std()))

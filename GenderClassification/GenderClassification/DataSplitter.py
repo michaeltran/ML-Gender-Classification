@@ -15,7 +15,6 @@ from MinePOSPats import MinePOSPats
 from MineWordPats import MineWordPats
 
 import numpy as np
-import multiprocessing as mp
 
 TAGGER = SequenceTagger.load('pos')
 
@@ -28,7 +27,7 @@ def SplitData():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
-    parser.add_argument('-m', '--mine', default=True, help ='')
+    parser.add_argument('-m', '--mine', default=False, help ='')
     opts = parser.parse_args()
     ###############################################
 
@@ -241,7 +240,7 @@ def WriteToExcel(path, data_text, data_classification):
     return
 
 def GetTokenizedText(text):
-    tokens = nltk.word_tokenize(text)
+    #tokens = nltk.word_tokenize(text)
     tokens = nltk_preprocessor.TokenizeText(text)
     return ' '.join(tokens)
 
@@ -254,14 +253,15 @@ def GetPOS(text):
     return ' '.join(pos_text)
 
 def GetTaggedPOS(text):
+    tagged_text = []
+
     pos_text = GetPOSTag(text)
     sentence = Sentence(text, use_tokenizer=True)
 
-    ## T O D O
-    for (a,b) in tagged:
-        pos_text.append('%s_%s' % (a, b))
+    for i in range(len(pos_text)):
+        tagged_text.append(sentence[i].text + '_' + pos_text[i])
 
-    return ' '.join(pos_text)
+    return ' '.join(tagged_text)
 
 def GetFMeasure(text):
     tagged = GetPOSTag(text)

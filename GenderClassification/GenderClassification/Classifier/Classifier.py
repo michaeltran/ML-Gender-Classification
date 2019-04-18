@@ -391,8 +391,6 @@ class Classifier(object):
                 ('clf', classifier),
             ])
         elif svm_type == 'svmlight':
-            # Bool - 0.67
-            # Kind of sucks
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
@@ -515,14 +513,16 @@ class Classifier(object):
         elif svm_type == 'bool': 
             # Bool - 0.67
             # Kind of sucks
+            # Reducer sux
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), tokenizer=lambda x: x.split(' '), lowercase=True)
 
-            classifier = LinearSVC(max_iter=100000)
-            #parameters = [
-            #        {'C': [0.1, 1, 2, 3, 4, 5]},
-            #    ]
-            #final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
+            classifier = LinearSVC(max_iter=100000, C=0.001, penalty='l2', loss='squared_hinge')
+            parameters = [
+                    {'C': [0.001, 0.01, 0.1, 1, 10], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
+                    {'C': [0.001, 0.01, 0.1, 1, 10], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
+                ]
+            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -574,22 +574,22 @@ class Classifier(object):
                         ('features', features2),
                     ])),
                 ])),
-                ('clf', classifier),
+                ('clf', final_classifier),
             ])
         elif svm_type == 'tf': 
             # TF 1-GRAM [ALL] - 0.74 ACC
             # 2/3-gram lowers accuracy
             # [CHI, IG] lower accuracy than [ALL] TO DO: TEST
             # Higher accuracy without POS/GPF/FA TO DO: TEST
-            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            pos_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 3), tokenizer=lambda x: x.split(' '), lowercase=False)
             text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
 
             classifier = LinearSVC(max_iter=100000)
             parameters = [
-                    {'C': [0.01, 0.1, 1, 10], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
-                    {'C': [0.01, 0.1, 1, 10], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
+                    {'C': [0.001, 0.01, 0.1, 1, 10], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
+                    {'C': [0.001, 0.01, 0.1, 1, 10], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
                 ]
-            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=-1)
+            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -625,14 +625,14 @@ class Classifier(object):
                     ])),
                 ])
 
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            #reducer = ColumnExtractor(cols=reducer_features)
+            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        #('reducer', reducer),
+                        ('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
@@ -790,7 +790,7 @@ class Classifier(object):
             ])
 
         text_clf.fit(training_data_dict, training_data_classification)
-        #print(final_classifier.best_params_)
+        print(final_classifier.best_params_)
         #print(classifier.coef_ )
         ###############################################
 
