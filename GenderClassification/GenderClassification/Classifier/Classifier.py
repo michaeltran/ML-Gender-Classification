@@ -132,15 +132,6 @@ class Classifier(object):
 
             classifier = MultinomialNB()
 
-            #text_pipeline = Pipeline([
-            #    ('selector', ItemSelector(key='tokenized_text')),
-            #    ('vectorizer', text_vectorizer),
-            #    ('tfidf', TfidfTransformer(use_idf=True)),
-            #])
-
-            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, text_pipeline, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            #reducer = ColumnExtractor(cols=reducer_features)
-
             features1 = FeatureUnion([
                     ('pos', Pipeline([
                         ('selector', ItemSelector(key='pos')),
@@ -582,12 +573,12 @@ class Classifier(object):
             # [CHI, IG] lower accuracy than [ALL] TO DO: TEST
             # Higher accuracy without POS/GPF/FA TO DO: TEST
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' '))
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 3), lowercase=True, tokenizer=lambda x: x.split(' '))
 
-            classifier = LinearSVC(max_iter=100000)
+            classifier = LinearSVC(max_iter=100000, C=1, loss='hinge', penalty='l2')
             parameters = [
-                    {'C': [0.001, 0.01, 0.1, 1, 10], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
-                    {'C': [0.001, 0.01, 0.1, 1, 10], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
+                    {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
+                    {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
                 ]
             final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
 
@@ -625,34 +616,19 @@ class Classifier(object):
                     ])),
                 ])
 
-            reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
-            reducer = ColumnExtractor(cols=reducer_features)
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
 
             text_clf = Pipeline([
                 ('features', FeatureUnion([
                     ('pipeline', Pipeline([
                         ('features', features1),
-                        ('reducer', reducer),
+                        #('reducer', reducer),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
                         ('scaler', MaxAbsScaler()),
                     ])),
-                    #('pos', Pipeline([
-                    #    ('selector', ItemSelector(key='pos')),
-                    #    ('vectorizer', pos_vectorizer),
-                    #    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #])),
-                    #('gpf', Pipeline([
-                    #    ('selector', ItemSelector(key='gpf')),
-                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                    #    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #])),
-                    #('fa', Pipeline([
-                    #    ('selector', ItemSelector(key='fa')),
-                    #    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
-                    #    ('tfidf', TfidfTransformer(use_idf=True)),
-                    #])),
                 ])),
                 ('clf', final_classifier),
             ])
@@ -790,7 +766,7 @@ class Classifier(object):
             ])
 
         text_clf.fit(training_data_dict, training_data_classification)
-        print(final_classifier.best_params_)
+        #print(final_classifier.best_params_)
         #print(classifier.coef_ )
         ###############################################
 

@@ -91,31 +91,31 @@ def main():
     #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
 
     ## Naive Bayes ################################
-    #print("### Naive Bayes ###")
-    #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
-    #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-    #predictors['NB TF'] = nb_predictions
+    print("### Naive Bayes ###")
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("NB TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    predictors['NB TF'] = nb_predictions
 
-    #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
-    #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB DISCRETE Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-    #predictors['NB DISCRETE'] = nb_predictions
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("NB DISCRETE Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    predictors['NB DISCRETE'] = nb_predictions
 
-    #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
-    #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-    #predictors['NB BOOL'] = nb_predictions
+    nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("NB BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    predictors['NB BOOL'] = nb_predictions
 
     #CrossValidationTest(training_data_dict, pos_pattern_vocab)
     ##############################################
 
     ## SVM ########################################
     print("### SVM ###")
-    #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
-    #svm_predictions = svm_clf.predict(testing_data_dict)
-    #print("SVM BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
-    #predictors['SVM BOOL'] = svm_predictions
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    predictors['SVM BOOL'] = svm_predictions
 
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
     svm_predictions = svm_clf.predict(testing_data_dict)

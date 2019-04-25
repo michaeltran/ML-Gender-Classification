@@ -231,7 +231,7 @@ class EFS(object):
     def RandomSampleX(self, X, Y):
         indices = []
 
-        indices = random.sample(range(0, X.shape[0]), min(X.shape[0], 2000))
+        indices = random.sample(range(0, X.shape[0]), min(X.shape[0], 1000))
         new_X = X[indices,:]
         new_Y = [Y[i] for i in indices]
 
@@ -254,6 +254,7 @@ class EFS(object):
         Xi = []
         for feature_selection in feature_selections:
             if FSC.CHI == feature_selection:
+                #Xi.append(chi2(X, Y)[0])
                 Xi.append(self.ChiSquared(X_dense, Y_mask))
             elif FSC.IG == feature_selection:
                 Xi.append(self.InformationGain(X_dense, Y_mask))
@@ -264,7 +265,6 @@ class EFS(object):
             elif FSC.WOE == feature_selection:
                 Xi.append(self.WeightOfEvidenceForText(X_dense, Y_mask))
 
-        #Xi.append(chi2(X, Y)[0])
         #Xi.append(self.ChiSquared(X_dense, Y))
         #Xi.append(mutual_info_classif(X, Y, discrete_features=True))
 
@@ -273,18 +273,18 @@ class EFS(object):
         del self.ContingencyTableDict
 
         t = len(Xi)                     # number of feature scoring algorithms
-        #if X.shape[1] > 500:
-        #    w = int(X.shape[1]/100)     # window size
-        #    tau_i = int(X.shape[1]/20)  # tau
-        #    step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
-        #else:
-        #    w = int(X.shape[1]/10)
-        #    tau_i = int(X.shape[1]/2)
-        #    step_size = 1
+        if X.shape[1] > 500:
+            #w = int(X.shape[1]/100)     # window size
+            #tau_i = int(X.shape[1]/20)  # tau
+            #step_size = int(w / 5)      # step size for cross validation (ideally 1, but VERY slow performance)
 
-        w = int(X.shape[1]/2) - 1
-        tau_i = int(X.shape[1]/2)
-        step_size = int(w / 10)
+            w = int(X.shape[1]/2) - 1
+            tau_i = int(X.shape[1]/2)
+            step_size = int(w / 15)
+        else:
+            w = int(X.shape[1]/10)
+            tau_i = int(X.shape[1]/2)
+            step_size = 1
 
         C = []
         for i in range(0, t):

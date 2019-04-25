@@ -60,9 +60,9 @@ def SplitData():
                 print('Classification Error: %s is not defined.' % (classification))
                 return
 
-    #blog_male_data, blog_female_data = GetBlogAuthorshipCorpusData('')
-    #data_male_text = data_male_text + blog_male_data
-    #data_female_text = data_female_text + blog_female_data
+    blog_male_data, blog_female_data = GetBlogAuthorshipCorpusData('data/blogs')
+    data_male_text = data_male_text + blog_male_data
+    data_female_text = data_female_text + blog_female_data
 
     shuffle(data_male_text)
     shuffle(data_female_text)
@@ -425,10 +425,10 @@ def GetBlogAuthorshipCorpusData(path):
     male_data = []
     female_data = []
 
-    for file_name in os.listdir('data/blogs'):
+    for file_name in os.listdir(path):
         gender = re.findall("[0-9]*\.(.*)\.[0-9]+\..*\.xml", file_name)[0]
         try:
-            mydoc = minidom.parse('data/blogs/' + file_name)
+            mydoc = minidom.parse(path + '/' + file_name)
             posts = mydoc.getElementsByTagName('post')
             #print(posts[1].firstChild.data)
 
