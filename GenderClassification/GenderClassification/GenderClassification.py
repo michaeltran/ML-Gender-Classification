@@ -16,6 +16,12 @@ from scipy.sparse import coo_matrix
 from Classifier.Classifier import Classifier
 from Helper.DebugPrint import DebugPrint
 
+from keras.models import Sequential
+from keras import layers
+
+import matplotlib.pyplot as plt
+plt.style.use('ggplot')
+
 clf = Classifier()
 
 def main():
@@ -29,6 +35,7 @@ def main():
     ## Build the Training Set and Testing Set #####
     training_data_dict = LoadDataSet('data/train_data.xlsx')
     testing_data_dict = LoadDataSet('data/test_data.xlsx')
+    unlabeled_data_dict = LoadDataSet('data/unlabeled_data.xlsx')
     ###############################################
 
     ## Load POS Patterns ##########################
@@ -90,6 +97,34 @@ def main():
     #print("ENSEMBLE-R Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
 
+    ## Neural Networks ################################
+
+    training = clf.SemiSupervisedLearning(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
+
+    #nb_clf = clf.BuildClassifierMLP(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
+    #nb_predictions = nb_clf.predict(testing_data_dict)
+    #print("NB TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+
+    history = clf.BuildClassifierKeras(training, testing_data_dict, pos_pattern_vocab, 'tf')
+
+    plot_history(history)
+
+    svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    predictors['SVM TF'] = svm_predictions
+
+    svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    predictors['SVM TF'] = svm_predictions
+
+    nb_clf = clf.BuildClassifierMLP(training, testing_data_dict, pos_pattern_vocab, 'tf')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+
+    ##############################################
+
     ## Naive Bayes ################################
     print("### Naive Bayes ###")
     nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
@@ -106,8 +141,6 @@ def main():
     nb_predictions = nb_clf.predict(testing_data_dict)
     print("NB BOOL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
     predictors['NB BOOL'] = nb_predictions
-
-    #CrossValidationTest(training_data_dict, pos_pattern_vocab)
     ##############################################
 
     ## SVM ########################################
@@ -218,6 +251,42 @@ def main():
     print("Time Run = %fs" % (end - start))
 
     return
+
+def plot_history(history):
+    acc = history.history['acc']
+    val_acc = history.history['val_acc']
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
+    x = range(1, len(acc) + 1)
+
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(x, acc, 'b', label='Training acc')
+    plt.plot(x, val_acc, 'r', label='Validation acc')
+    plt.title('Training and validation accuracy')
+    plt.legend()
+    plt.subplot(1, 2, 2)
+    plt.plot(x, loss, 'b', label='Training loss')
+    plt.plot(x, val_loss, 'r', label='Validation loss')
+    plt.title('Training and validation loss')
+    plt.legend()
+
+#def batch_generator(X, y, batch_size, shuffle):
+#    number_of_batches = X.shape[0]/batch_size
+#    counter = 0
+#    sample_index = np.arange(X.shape[0])
+#    if shuffle:
+#        np.random.shuffle(sample_index)
+#    while True:
+#        batch_index = sample_index[batch_size*counter:batch_size*(counter+1)]
+#        X_batch = X[batch_index,:].toarray()
+#        y_batch = y[batch_index]
+#        counter += 1
+#        yield X_batch, y_batch
+#        if (counter == number_of_batches):
+#            if shuffle:
+#                np.random.shuffle(sample_index)
+#            counter = 0
 
 def GetFinalPrediction(real_classification, predictors):
     predictor_score = {}

@@ -60,9 +60,25 @@ def SplitData():
                 print('Classification Error: %s is not defined.' % (classification))
                 return
 
+    #min = 32714
+    #max = 74
+    #for text in data_male_text + data_female_text:
+    #    if len(text) > max:
+    #        max = len(text)
+    #    if len(text) < min:
+    #        min = len(text)
+
+    blog_data = []
+    blog_data_classification = []
     blog_male_data, blog_female_data = GetBlogAuthorshipCorpusData('data/blogs')
-    data_male_text = data_male_text + blog_male_data
-    data_female_text = data_female_text + blog_female_data
+    for i in range(min(len(blog_male_data), len(blog_female_data))):
+        blog_data.append(blog_male_data[i])
+        blog_data_classification.append(1)
+        blog_data.append(blog_female_data[i])
+        blog_data_classification.append(-1)
+
+    #data_male_text = data_male_text + blog_male_data
+    #data_female_text = data_female_text + blog_female_data
 
     shuffle(data_male_text)
     shuffle(data_female_text)
@@ -70,7 +86,7 @@ def SplitData():
     GetPOSTags(data_male_text)
     GetPOSTags(data_female_text)
 
-    WritePOSToExcel('data/pos.xlsx')
+    #WritePOSToExcel('data/pos.xlsx')
 
     # POS Pattern Mining
     if opts.mine == True:
@@ -134,6 +150,9 @@ def SplitData():
 
     # Save Testing Data
     WriteToExcel('data/test_data.xlsx', testing_data_text, testing_data_classification)
+
+    # Save "Unlabled" Data
+    WriteToExcel('data/unlabeled_data.xlsx', blog_data, blog_data_classification)
     ###############################################
     print("Completed")
 
@@ -435,7 +454,9 @@ def GetBlogAuthorshipCorpusData(path):
             for post in posts:
                 text = post.firstChild.data
                 text = text.replace('\n', '').replace('\t', '').strip()
-                if len(text) < 100:
+                if len(text) < 100 or len(text) > 32700:
+                    continue
+                if text.startswith("="):
                     continue
                 if gender == 'male':
                     male_data.append(text)
@@ -456,7 +477,8 @@ def GetBlogAuthorshipCorpusData(path):
             #elif gender == 'female':
             #    female_data.append(entire_text)
         except:
-            print("Skipped: " + file_name)
+            test = 0
+            #print("Skipped: " + file_name)
 
     return male_data, female_data
 

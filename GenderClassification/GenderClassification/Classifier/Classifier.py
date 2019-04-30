@@ -17,6 +17,7 @@ from sklearn.decomposition import PCA
 from sklearn.decomposition import TruncatedSVD
 
 from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import SelectPercentile
 from sklearn.feature_selection import chi2
 from sklearn.feature_selection import SelectFromModel
 
@@ -44,6 +45,15 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
 
 from sklearn.linear_model import LogisticRegression
+
+from sklearn.calibration import CalibratedClassifierCV
+
+from sklearn.neural_network import MLPClassifier
+from keras.models import Sequential
+from keras import layers
+
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+import random
 
 from Classes.ColumnExtractor import ColumnExtractor
 from Classes.DenseTransformer import DenseTransformer
@@ -573,14 +583,15 @@ class Classifier(object):
             # [CHI, IG] lower accuracy than [ALL] TO DO: TEST
             # Higher accuracy without POS/GPF/FA TO DO: TEST
             pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
-            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 3), lowercase=True, tokenizer=lambda x: x.split(' '))
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' ')) # was 1,2,3
 
-            classifier = LinearSVC(max_iter=100000, C=1, loss='hinge', penalty='l2')
-            parameters = [
-                    {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
-                    {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
-                ]
-            final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
+            #classifier = LinearSVC(max_iter=100000, C=1, loss='hinge', penalty='l2')
+            classifier = LinearSVC(max_iter=100000, C=10, loss='hinge', penalty='l2')
+            #parameters = [
+            #        {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
+            #        {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
+            #    ]
+            #final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
 
             features1 = FeatureUnion([
                     ('pos', Pipeline([
@@ -624,13 +635,14 @@ class Classifier(object):
                     ('pipeline', Pipeline([
                         ('features', features1),
                         #('reducer', reducer),
+                        #('reducer', SelectPercentile(chi2, 50)),
                     ])),
                     ('pipeline2', Pipeline([
                         ('features', features2),
                         ('scaler', MaxAbsScaler()),
                     ])),
                 ])),
-                ('clf', final_classifier),
+                ('clf', classifier),
             ])
         elif svm_type == 'discrete': 
             # Discrete - 2GRAM 0.70 ACC NO REDUC
@@ -764,15 +776,79 @@ class Classifier(object):
                 ])),
                 ('clf', final_classifier),
             ])
+        elif svm_type == 'usl': 
+            pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+            text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), lowercase=True, tokenizer=lambda x: x.split(' ')) # was 1,2,3
+
+            #classifier = LinearSVC(max_iter=100000, C=1, loss='hinge', penalty='l2')
+            classifier = LinearSVC(max_iter=100000, C=10, loss='hinge', penalty='l2')
+            classifier = CalibratedClassifierCV(classifier, cv=5)
+            #parameters = [
+            #        {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l2'], 'loss': ['hinge', 'squared_hinge']},
+            #        {'C': [0.001, 0.01, 0.1, 1, 10, 100], 'penalty': ['l1'], 'loss': ['squared_hinge'], 'dual': [False]}
+            #    ]
+            #final_classifier = GridSearchCV(classifier, parameters, cv=5, n_jobs=7)
+
+            features1 = FeatureUnion([
+                    ('pos', Pipeline([
+                        ('selector', ItemSelector(key='pos')),
+                        ('vectorizer', pos_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                    ])),
+                    ('text', Pipeline([
+                        ('selector', ItemSelector(key='tokenized_text')),
+                        ('vectorizer', text_vectorizer),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                        ('reducer', SelectPercentile(chi2, 50)),
+                    ])),
+                    ('gpf', Pipeline([
+                        ('selector', ItemSelector(key='gpf')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                    ])),
+                    ('fa', Pipeline([
+                        ('selector', ItemSelector(key='fa')),
+                        ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                        ('tfidf', TfidfTransformer(use_idf=True)),
+                    ])),
+                ])
+
+            features2 = FeatureUnion([
+                    ('wordcount', Pipeline([
+                        ('selector', ItemSelector(key='wordcount')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ])),
+                    ('fmeasure', Pipeline([
+                        ('selector', ItemSelector(key='fmeasure')),
+                        ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                    ])),
+                ])
+
+            #reducer_features = self.GetFeatures(training_data_dict, training_data_classification, features1, classifier, [FSC.CHI, FSC.IG, FSC.MI, FSC.CE, FSC.WOE])
+            #reducer = ColumnExtractor(cols=reducer_features)
+
+            text_clf = Pipeline([
+                ('features', FeatureUnion([
+                    ('pipeline', Pipeline([
+                        ('features', features1),
+                        #('reducer', reducer),
+                    ])),
+                    ('pipeline2', Pipeline([
+                        ('features', features2),
+                        ('scaler', MaxAbsScaler()),
+                    ])),
+                ])),
+                ('clf', classifier),
+            ])
 
         text_clf.fit(training_data_dict, training_data_classification)
         #print(final_classifier.best_params_)
         #print(classifier.coef_ )
         ###############################################
 
-        feats = text_clf.named_steps['features']
-        test = feats.transform(training_data_dict)
-        DebugPrint(test[1])
+        #feats = text_clf.named_steps['features']
+        #test = feats.transform(training_data_dict)
+        #DebugPrint(test[1])
         #print(test[1])
 
         return text_clf
@@ -1255,6 +1331,244 @@ class Classifier(object):
         #print(test[1])
 
         return text_clf
+
+    def BuildClassifierKeras(self, training_data_dict, testing_data_dict, vocab, type):
+        pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+        text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), tokenizer=lambda x: x.split(' '), lowercase=True)
+
+        features1 = FeatureUnion([
+                ('pos', Pipeline([
+                    ('selector', ItemSelector(key='pos')),
+                    ('vectorizer', pos_vectorizer),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+                ('text', Pipeline([
+                    ('selector', ItemSelector(key='tokenized_text')),
+                    ('vectorizer', text_vectorizer),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+                ('gpf', Pipeline([
+                    ('selector', ItemSelector(key='gpf')),
+                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+                ('fa', Pipeline([
+                    ('selector', ItemSelector(key='fa')),
+                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+            ])
+
+        features2 = FeatureUnion([
+                ('wordcount', Pipeline([
+                    ('selector', ItemSelector(key='wordcount')),
+                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                ])),
+                ('fmeasure', Pipeline([
+                    ('selector', ItemSelector(key='fmeasure')),
+                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                ])),
+            ])
+
+        text_clf = Pipeline([
+            ('features', FeatureUnion([
+                ('pipeline', Pipeline([
+                    ('features', features1),
+                ])),
+                ('pipeline2', Pipeline([
+                    ('features', features2),
+                    ('scaler', MaxAbsScaler()),
+                ])),
+            ])),
+        ])
+
+        text_clf.fit(training_data_dict, training_data_dict['classification'])
+
+        X_train = text_clf.transform(training_data_dict)
+        X_test = text_clf.transform(testing_data_dict)
+        Y_train = training_data_dict['classification']
+        Y_train = np.array(Y_train)
+        Y_train[Y_train < 0] = 0
+        Y_train = Y_train.tolist()
+        Y_test = testing_data_dict['classification']
+        Y_test = np.array(Y_test)
+        Y_test[Y_test < 0] = 0
+        Y_test = Y_test.tolist()
+
+        input_dim = X_train.shape[1]
+
+        model = Sequential()
+        # 73.87
+        model.add(layers.Dense(100, input_dim=input_dim, activation='relu'))
+        model.add(layers.Dense(1, activation='sigmoid'))
+
+        # 73.55
+        #model.add(layers.Dense(512, input_dim=input_dim, activation='relu'))
+        #model.add(layers.Dropout(0.3))
+        #model.add(layers.Dense(256, activation='relu'))
+        #model.add(layers.Dropout(0.3))
+        #model.add(layers.Dense(1, activation='sigmoid'))
+
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.summary()
+
+        history = model.fit(X_train, Y_train, epochs=30, verbose=1, validation_data=(X_test, Y_test), batch_size=10)
+
+        loss, accuracy = model.evaluate(X_train, Y_train, verbose=False)
+        print("Training Accuracy: {:.4f}".format(accuracy))
+        loss, accuracy = model.evaluate(X_test, Y_test, verbose=False)
+        print("Testing Accuracy:  {:.4f}".format(accuracy))
+        return history
+
+    def BuildClassifierMLP(self, training_data_dict, testing_data_dict, vocab, type):
+        pos_vectorizer = CountVectorizer(vocabulary=vocab, analyzer='word', ngram_range=(1, 5), tokenizer=lambda x: x.split(' '), lowercase=False)
+        text_vectorizer = CountVectorizer(analyzer='word', ngram_range=(1, 1), tokenizer=lambda x: x.split(' '), lowercase=True)
+
+        classifier = MLPClassifier(hidden_layer_sizes=(100, 50, 25), activation='relu', solver='adam')
+
+        features1 = FeatureUnion([
+                ('pos', Pipeline([
+                    ('selector', ItemSelector(key='pos')),
+                    ('vectorizer', pos_vectorizer),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+                ('text', Pipeline([
+                    ('selector', ItemSelector(key='tokenized_text')),
+                    ('vectorizer', text_vectorizer),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+                ('gpf', Pipeline([
+                    ('selector', ItemSelector(key='gpf')),
+                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+                ('fa', Pipeline([
+                    ('selector', ItemSelector(key='fa')),
+                    ('toarray', FunctionTransformer(self.GetMultipleGenericArray, validate = False)),
+                    ('tfidf', TfidfTransformer(use_idf=True)),
+                ])),
+            ])
+
+        features2 = FeatureUnion([
+                ('wordcount', Pipeline([
+                    ('selector', ItemSelector(key='wordcount')),
+                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                ])),
+                ('fmeasure', Pipeline([
+                    ('selector', ItemSelector(key='fmeasure')),
+                    ('toarray', FunctionTransformer(self.GetGenericArray, validate = False)),
+                ])),
+            ])
+
+        text_clf = Pipeline([
+            ('features', FeatureUnion([
+                ('pipeline', Pipeline([
+                    ('features', features1),
+                ])),
+                ('pipeline2', Pipeline([
+                    ('features', features2),
+                    ('scaler', MaxAbsScaler()),
+                ])),
+            ])),
+            ('clf', classifier),
+        ])
+
+        text_clf.fit(training_data_dict, training_data_dict['classification'])
+
+        return text_clf
+
+    def SemiSupervisedLearning(self, training_data_dict, testing_data_dict, blog_data_dict, vocab):
+        training = dict(training_data_dict)
+        blog = dict(blog_data_dict)
+
+        MAX_ITERATIONS = 10
+        MAX_ADDED = 100
+
+        iteration = 0
+        previous_training_length = 0
+        while len(training['index']) != previous_training_length and iteration < MAX_ITERATIONS:
+            iteration += 1
+            previous_training_length = len(training['index'])
+            clf = self.BuildClassifierSVM(training, training['classification'], vocab, None, 'usl')
+            predictions = clf.predict(testing_data_dict)
+            print("%d - Accuracy: %0.3f" % (iteration, accuracy_score(testing_data_dict['classification'], predictions)))
+
+            #indexes = random.sample(range(0, len(blog['index'])), 100)
+            #temp_blog_data_dict = {}
+            #for key in blog_data_dict:
+            #    temp_blog_data_dict[key] = [blog_data_dict[key][i] for i in indexes]
+
+            males_added = 0
+            females_added = 0
+
+            #decision = clf.decision_function(blog)
+
+            #indexes_male = np.argsort(-decision)
+            #indexes_female = np.argsort(decision)
+            #predictions = clf.predict(blog)
+
+            #print(decision[indexes_male[0]])
+            #print(decision[indexes_male[1]])
+
+            #print(decision[indexes_female[0]])
+            #print(decision[indexes_female[1]])
+
+
+            probability_list = clf.predict_proba(blog)
+            print(clf.classes_)
+            # [-1, 1]
+            indexes_male = np.argsort(-probability_list[:,1])
+            indexes_female = np.argsort(-probability_list[:,0])
+            predictions = clf.predict(blog)
+
+            print(probability_list[indexes_male[0]])
+            print(probability_list[indexes_male[1]])
+
+            print(probability_list[indexes_female[0]])
+            print(probability_list[indexes_female[1]])
+
+            to_remove = []
+
+            i = 0
+            while males_added < MAX_ADDED:
+                if predictions[indexes_male[i]] == blog['classification'][indexes_male[i]]:
+                    males_added += 1
+                    
+                    to_remove.append(indexes_male[i])
+                    for key in training:
+                        training[key].append(blog[key][indexes_male[i]])
+                i += 1
+            i = 0
+            while females_added < MAX_ADDED:
+                if predictions[indexes_female[i]] == blog['classification'][indexes_female[i]]:
+                    females_added += 1
+                    
+                    to_remove.append(indexes_female[i])
+                    for key in training:
+                        training[key].append(blog[key][indexes_female[i]])
+                i += 1
+
+            #for i in range(len(predictions)):
+            #    if predictions[i] == blog['classification'][i]:
+            #        if predictions[i] == 1 and males_added >= MAX_ADDED:
+            #            continue
+            #        elif predictions[i] == -1 and females_added >= MAX_ADDED:
+            #            continue
+
+            #        if predictions[i] == 1:
+            #            males_added += 1
+            #        else:
+            #            females_added += 1
+
+            #        to_remove.append(i)
+            #        for key in training:
+            #            training[key].append(blog[key][i])
+
+            to_remove.sort()
+            for i in range(len(to_remove)):
+                for key in blog:
+                    del blog[key][to_remove[i]-i]
+        return training
 
     def GetGenericArray(self, x):
         return np.array([t for t in x]).reshape(-1, 1)
