@@ -1,0 +1,141 @@
+Using TensorFlow backend.
+## Initial test set accuracy...
+SVM USL Accuracy: 0.716
+## Adding test set back into training set...
+## Adding some more labled data into training set...
+## Extracting new test set from training set...
+## CV Accuracy on new training/test set...
+The thread 0x2 has exited with code 0 (0x0).
+The thread 0x4 has exited with code 0 (0x0).
+The thread 0x3 has exited with code 0 (0x0).
+Cross Validation Accuracy: 0.7521 (+/- 0.02)
+Cross Validation Precision: 0.7533 (+/- 0.02)
+Cross Validation Recall: 0.7521 (+/- 0.02)
+Cross Validation F-score: 0.7520 (+/- 0.02)
+## MLP Accuracy on new training/test set...
+Iteration 1, loss = 0.68257455
+Validation score: 0.761384
+Iteration 2, loss = 0.46265672
+Validation score: 0.808743
+Iteration 3, loss = 0.10954164
+Validation score: 0.894353
+Iteration 4, loss = 0.00602257
+Validation score: 0.899818
+Iteration 5, loss = 0.00277946
+Validation score: 0.908925
+Iteration 6, loss = 0.00239419
+Validation score: 0.907104
+Iteration 7, loss = 0.00217961
+Validation score: 0.907104
+Iteration 8, loss = 0.00201385
+Validation score: 0.905282
+Iteration 9, loss = 0.00188634
+Validation score: 0.903461
+Iteration 10, loss = 0.00178222
+Validation score: 0.901639
+Iteration 11, loss = 0.00169637
+Validation score: 0.897996
+Iteration 12, loss = 0.00162286
+Validation score: 0.897996
+Iteration 13, loss = 0.00155714
+Validation score: 0.892532
+Iteration 14, loss = 0.00149681
+Validation score: 0.892532
+Iteration 15, loss = 0.00144034
+Validation score: 0.892532
+Iteration 16, loss = 0.00138695
+Validation score: 0.888889
+Validation score did not improve more than tol=0.000100 for 10 consecutive epochs. Stopping.
+MLP Accuracy: 0.764
+## Supervised Semi-Supervised Learning...
+1 - Accuracy: 0.744
+1 - Accuracy: 0.752
+1 - Accuracy: 0.749
+1 - Accuracy: 0.746
+1 - Accuracy: 0.757
+1 - Accuracy: 0.754
+1 - Accuracy: 0.756
+1 - Accuracy: 0.756
+1 - Accuracy: 0.754
+1 - Accuracy: 0.767
+SVM USL Accuracy: 0.759
+## MLP Accuracy on SSS dataset
+Iteration 1, loss = 0.64205681
+Validation score: 0.786091
+Iteration 2, loss = 0.20081552
+Validation score: 0.880927
+Iteration 3, loss = 0.00848043
+Validation score: 0.865121
+Iteration 4, loss = 0.00399557
+Validation score: 0.903056
+Iteration 5, loss = 0.00335672
+Validation score: 0.899895
+Iteration 6, loss = 0.00305404
+Validation score: 0.894626
+Iteration 7, loss = 0.00314911
+Validation score: 0.897787
+Iteration 8, loss = 0.00274971
+Validation score: 0.885142
+Iteration 9, loss = 0.00310236
+Validation score: 0.893572
+Iteration 10, loss = 0.00399184
+Validation score: 0.874605
+Iteration 11, loss = 0.00218488
+Validation score: 0.839831
+Iteration 12, loss = 0.00289892
+Validation score: 0.851423
+Iteration 13, loss = 0.00342030
+Validation score: 0.885142
+Iteration 14, loss = 0.00287901
+Validation score: 0.800843
+Iteration 15, loss = 0.00370155
+Validation score: 0.855638
+Validation score did not improve more than tol=0.000100 for 10 consecutive epochs. Stopping.
+MLP Accuracy: 0.775
+## Keras Accuracy on SSS dataset
+Loaded '__main__'
+Backend Qt5Agg is interactive backend. Turning interactive mode on.
+WARNING:tensorflow:From C:\Anaconda3\lib\site-packages\tensorflow\python\framework\op_def_library.py:263: colocate_with (from tensorflow.python.framework.ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Colocations handled automatically by placer.
+WARNING:tensorflow:From C:\Anaconda3\lib\site-packages\keras\backend\tensorflow_backend.py:3445: calling dropout (from tensorflow.python.ops.nn_ops) with keep_prob is deprecated and will be removed in a future version.
+Instructions for updating:
+Please use `rate` instead of `keep_prob`. Rate should be set to `rate = 1 - keep_prob`.
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+dense_1 (Dense)              (None, 100)               143781300 
+_________________________________________________________________
+dropout_1 (Dropout)          (None, 100)               0         
+_________________________________________________________________
+dense_2 (Dense)              (None, 25)                2525      
+_________________________________________________________________
+dropout_2 (Dropout)          (None, 25)                0         
+_________________________________________________________________
+dense_3 (Dense)              (None, 50)                1300      
+_________________________________________________________________
+dense_4 (Dense)              (None, 1)                 51        
+=================================================================
+Total params: 143,785,176
+Trainable params: 143,785,176
+Non-trainable params: 0
+_________________________________________________________________
+WARNING:tensorflow:From C:\Anaconda3\lib\site-packages\tensorflow\python\ops\math_ops.py:3066: to_int32 (from tensorflow.python.ops.math_ops) is deprecated and will be removed in a future version.
+Instructions for updating:
+Use tf.cast instead.
+Train on 9486 samples, validate on 610 samples
+Epoch 1/40
+
+Restoring model weights from the end of the best epoch
+Epoch 00008: early stopping
+Training Accuracy: 0.9881
+Testing Accuracy:  0.7639
+## CV Accuract on SSS dataset
+The thread 0x5 has exited with code 0 (0x0).
+The thread 0x7 has exited with code 0 (0x0).
+The thread 0x6 has exited with code 0 (0x0).
+Cross Validation Accuracy: 0.8014 (+/- 0.01)
+Cross Validation Precision: 0.8016 (+/- 0.01)
+Cross Validation Recall: 0.8014 (+/- 0.01)
+Cross Validation F-score: 0.8013 (+/- 0.01)
+The program 'python.exe' has exited with code -1 (0xffffffff).

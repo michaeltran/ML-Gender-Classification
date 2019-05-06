@@ -4,11 +4,9 @@ import pandas as pd
 import numpy as np
 import statistics
 import time
-from sklearn.model_selection import cross_val_score
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.svm import LinearSVC
-from sklearn.svm import SVC
+import multiprocessing as mp
+
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, precision_recall_fscore_support
 
 from sklearn import model_selection
 from scipy.sparse import coo_matrix
@@ -16,13 +14,12 @@ from scipy.sparse import coo_matrix
 from Classifier.Classifier import Classifier
 from Helper.DebugPrint import DebugPrint
 
-from keras.models import Sequential
-from keras import layers
-
 import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 
 clf = Classifier()
+
+RANDOMIZER_SEED = 1
 
 def main():
     start = time.time()
@@ -44,47 +41,178 @@ def main():
         for line in file:
             pos_pattern_vocab.append(line.strip('\n'))
     word_pattern_vocab = []
-    with open('data/WordPatterns.txt', encoding="utf8") as file:
-        for line in file:
-            if line.strip('\n') != '':
-                word_pattern_vocab.append(line.strip('\n'))
+    #with open('data/WordPatterns.txt', encoding="utf8") as file:
+    #    for line in file:
+    #        if line.strip('\n') != '':
+    #            word_pattern_vocab.append(line.strip('\n'))
     ###############################################
 
     predictors = {}
 
-    #svmr_clf = clf.BuildClassifierSVMR(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool')
-    #svmr_predictions = svmr_clf.predict(testing_data_dict)
-    #predictions = []
-    #for prediction in svmr_predictions:
-    #    if prediction >= 0.5:
-    #        predictions.append(1)
-    #    else:
-    #        predictions.append(0)
-    #print("SVMR DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
-    #svmr_classifiers.append(svmr_clf)
-    #svmr_predictors.append(predictions)
+    print('## Initial test set accuracy...')
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM USL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
 
-    #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'svc')
+    print('## Adding test set back into training set...')
+    # Add Testing Data Back to Training Data
+    for i in range(len(testing_data_dict['index'])):
+        for key in training_data_dict:
+            training_data_dict[key].append(testing_data_dict[key][i])
+    testing_data_dict = {}
+    print('## Adding some more labled data into training set...')
+    # Add Unlabled Data
+    for i in range(3000):
+        for key in training_data_dict:
+            training_data_dict[key].append(unlabeled_data_dict[key][0])
+            del unlabeled_data_dict[key][0]
+
+
+    ## Neural Networks ################################
+
+    #CrossValidationTest(training_data_dict, pos_pattern_vocab)
+
+    #for i in range(len(unlabeled_data_dict['index'])):
+    #    for key in training_data_dict:
+    #        training_data_dict[key].append(unlabeled_data_dict[key][i])
+
+    #svm_clf = clf.BuildClassifierSGD(training_data_dict, pos_pattern_vocab, 'sgd')
     #svm_predictions = svm_clf.predict(testing_data_dict)
-    #print("SVM SVC Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
-    #svm_classifiers.append(svm_clf)
-    #svm_predictors.append(svm_predictions)
+    #print("SGD Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #predictors['SGD'] = svm_predictions
 
-    #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'default')
+    print('## Extracting new test set from training set...')
+    # Extract Testing Data
+    X_train = {}
+    Y_test = {}
+    kf = model_selection.KFold(n_splits=10, shuffle=True, random_state=RANDOMIZER_SEED)
+    for train_index, test_index in kf.split(training_data_dict['index']):
+        for key in training_data_dict:
+            X_train[key] = [training_data_dict[key][i] for i in train_index]
+        for key in training_data_dict:
+            Y_test[key] = [training_data_dict[key][i] for i in test_index]
+        break
+
+    training_data_dict = X_train
+    testing_data_dict = Y_test
+
+    X_train = {}
+    Y_test = {}
+
+    print('## CV Accuracy on new training/test set...')
+    CrossValidationTest(training_data_dict, None, pos_pattern_vocab)
+
+    print('## MLP Accuracy on new training/test set...')
+    nb_clf = clf.BuildClassifierMLP(training_data_dict, pos_pattern_vocab, 'tf')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+
+    print('## Supervised Semi-Supervised Learning...')
+    training_data_dict = clf.SemiSupervisedLearning(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
+
+    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
+    svm_predictions = svm_clf.predict(testing_data_dict)
+    print("SVM USL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    predictors['SVM USL'] = svm_predictions
+
+    print('## MLP Accuracy on SSS dataset')
+    nb_clf = clf.BuildClassifierMLP(training_data_dict, pos_pattern_vocab, 'tf')
+    nb_predictions = nb_clf.predict(testing_data_dict)
+    print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    predictors['MLP'] = nb_predictions
+
+    print('## Keras Accuracy on SSS dataset')
+    history, predictions = clf.BuildClassifierKeras(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
+
+    print('## CV Accuracy on SSS dataset')
+    CrossValidationTest(training_data_dict, None, pos_pattern_vocab)
+
+    #######################
+
+    ##svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
+    ##svm_predictions = svm_clf.predict(testing_data_dict)
+    ##print("SVM USL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    ##predictors['USL'] = svm_predictions
+
+    #CrossValidationTest(training_data_dict, None, pos_pattern_vocab)
+
+    #training = clf.SemiSupervisedLearning(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
+
+    #svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
     #svm_predictions = svm_clf.predict(testing_data_dict)
-    #print("SVM DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
-    #svm_classifiers.append(svm_clf)
-    #svm_predictors.append(svm_predictions)
+    #print("SVM USL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #predictors['USL'] = svm_predictions
 
-    #nb_clf = clf.BuildClassifierNB(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'default')
+    #CrossValidationTest(training, None, pos_pattern_vocab)
+
+
+
+    #added_blog = clf.SemiSupervisedLearning2(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
+
+    #new_training_set = dict(added_blog)
+    #for i in range(len(training_data_dict['index'])):
+    #    for key in training_data_dict:
+    #        new_training_set[key].append(training_data_dict[key][i])
+
+    #CrossValidationTest(training_data_dict, added_blog, pos_pattern_vocab)
+
+    ##svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    ##svm_predictions = svm_clf.predict(testing_data_dict)
+    ##print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    ##predictors['SVM TF'] = svm_predictions
+
+    #svm_clf = clf.BuildClassifierSVM(new_training_set, new_training_set['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
+    #svm_predictions = svm_clf.predict(testing_data_dict)
+    #print("SVM USL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #predictors['USL'] = svm_predictions
+
+    #history = clf.BuildClassifierKeras(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
+
+    #nb_clf = clf.BuildClassifierMLP(training_data_dict, pos_pattern_vocab, 'tf')
     #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB DEFAULT Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-    #predictors['NB DEFAULT'] = nb_predictions
+    #print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    #predictors['MLP'] = nb_predictions
 
-    #ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool-bagging')
-    #ensemble_predictions = ensemble_clf.predict(testing_data_dict)
-    #print("ENSEMBLE BAGGING Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], ensemble_predictions)))
-    #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
+    #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    #svm_predictions = svm_clf.predict(testing_data_dict)
+    #print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #predictors['SVM TF'] = svm_predictions
+
+    #history = clf.BuildClassifierKeras(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
+
+    #training = clf.SemiSupervisedLearning(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
+
+    #CrossValidationTest(training, pos_pattern_vocab)
+
+    #training_data_dict = training
+    #history = clf.BuildClassifierKeras(training, testing_data_dict, pos_pattern_vocab, 'tf')
+
+    #plot_history(history)
+
+    ##svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
+    ##svm_predictions = svm_clf.predict(testing_data_dict)
+    ##print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    ##predictors['SVM TF'] = svm_predictions
+
+
+    #svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
+    #svm_predictions = svm_clf.predict(testing_data_dict)
+    #print("SVM USL Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #predictors['USL'] = svm_predictions
+
+    #nb_clf = clf.BuildClassifierMLP(training, pos_pattern_vocab, 'tf')
+    #nb_predictions = nb_clf.predict(testing_data_dict)
+    #print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
+    #predictors['MLP'] = nb_predictions
+
+    ##############################################
+
+    ## Ensemble ##################################
+
+    ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'bool-bagging')
+    ensemble_predictions = ensemble_clf.predict(testing_data_dict)
+    print("ENSEMBLE BAGGING Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], ensemble_predictions)))
+    predictors['ENSEMBLE BAGGING'] = ensemble_predictions
 
     #ensemble_clf = clf.BuildClassifierEnsemble(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete-bagging-r')
     #ensemble_predictions = ensemble_clf.predict(testing_data_dict)
@@ -96,33 +224,6 @@ def main():
     #        predictions.append(-1)
     #print("ENSEMBLE-R Accuracy: %0.2f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     #predictors['ENSEMBLE BAGGING'] = ensemble_predictions
-
-    ## Neural Networks ################################
-
-    training = clf.SemiSupervisedLearning(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
-
-    #nb_clf = clf.BuildClassifierMLP(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
-    #nb_predictions = nb_clf.predict(testing_data_dict)
-    #print("NB TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-
-    history = clf.BuildClassifierKeras(training, testing_data_dict, pos_pattern_vocab, 'tf')
-
-    plot_history(history)
-
-    svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'tf')
-    svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
-    predictors['SVM TF'] = svm_predictions
-
-    svm_clf = clf.BuildClassifierSVM(training, training['classification'], pos_pattern_vocab, word_pattern_vocab, 'usl')
-    svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
-    predictors['SVM TF'] = svm_predictions
-
-    nb_clf = clf.BuildClassifierMLP(training, testing_data_dict, pos_pattern_vocab, 'tf')
-    nb_predictions = nb_clf.predict(testing_data_dict)
-    print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
-
     ##############################################
 
     ## Naive Bayes ################################
@@ -155,15 +256,15 @@ def main():
     print("SVM TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
     predictors['SVM TF'] = svm_predictions
 
-    svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'svmlight-tf')
-    feats = svm_clf.named_steps['features']
-    X = feats.transform(training_data_dict)
-    ConvertToSVMLight(X, training_data_dict['classification'], 'data/TrainSVMLight.txt')
-    X = feats.transform(testing_data_dict)
-    ConvertToSVMLight(X, testing_data_dict['classification'], 'data/TestSVMLight.txt')
-    svm_predictions = svm_clf.predict(testing_data_dict)
-    print("SVM LIGHT Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
-    predictors['SVM LIGHT'] = svm_predictions
+    #svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'svmlight-tf')
+    #feats = svm_clf.named_steps['features']
+    #X = feats.transform(training_data_dict)
+    #ConvertToSVMLight(X, training_data_dict['classification'], 'data/TrainSVMLight.txt')
+    #X = feats.transform(testing_data_dict)
+    #ConvertToSVMLight(X, testing_data_dict['classification'], 'data/TestSVMLight.txt')
+    #svm_predictions = svm_clf.predict(testing_data_dict)
+    #print("SVM LIGHT Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], svm_predictions)))
+    #predictors['SVM LIGHT'] = svm_predictions
 
     svm_clf = clf.BuildClassifierSVM(training_data_dict, training_data_dict['classification'], pos_pattern_vocab, word_pattern_vocab, 'discrete')
     svm_predictions = svm_clf.predict(testing_data_dict)
@@ -210,14 +311,6 @@ def main():
             predictions.append(-1)
     print("SVM-R TF Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], predictions)))
     predictors['SVM-R TF'] = svmr_predictions
-
-    ## Cross Validation
-    #feats = svm_clf.named_steps['features']
-    #print("Training Score: %f" % (svm_clf.score(training_data_dict, training_data_dict['classification'])))
-    #X = feats.transform(training_data_dict)
-    #cv_scores = cross_val_score(LinearSVC(max_iter=100000), X, training_data_dict['classification'], cv=10, scoring='accuracy')
-    #print("Cross Validation Accuracy: %0.2f (+/- %0.2f)" % (cv_scores.mean(), cv_scores.std()))
-    #print()
     ##############################################
 
     ## Test Model #################################
@@ -271,23 +364,6 @@ def plot_history(history):
     plt.title('Training and validation loss')
     plt.legend()
 
-#def batch_generator(X, y, batch_size, shuffle):
-#    number_of_batches = X.shape[0]/batch_size
-#    counter = 0
-#    sample_index = np.arange(X.shape[0])
-#    if shuffle:
-#        np.random.shuffle(sample_index)
-#    while True:
-#        batch_index = sample_index[batch_size*counter:batch_size*(counter+1)]
-#        X_batch = X[batch_index,:].toarray()
-#        y_batch = y[batch_index]
-#        counter += 1
-#        yield X_batch, y_batch
-#        if (counter == number_of_batches):
-#            if shuffle:
-#                np.random.shuffle(sample_index)
-#            counter = 0
-
 def GetFinalPrediction(real_classification, predictors):
     predictor_score = {}
     for predictor_type, predictor in predictors.items():
@@ -327,9 +403,13 @@ def GetFinalPrediction(real_classification, predictors):
 
     return correct_classifications_male + correct_classifications_female, [(k, predictor_score[k]) for k in sorted(predictor_score, key=predictor_score.get, reverse=True)]
 
+def CrossValidationTest(X, X_addon, pos_pattern_vocab):
+    kf = model_selection.KFold(n_splits=10, shuffle=True, random_state=RANDOMIZER_SEED)
 
-def CrossValidationTest(X, pos_pattern_vocab):
-    kf = model_selection.KFold(n_splits=10)
+    cv_scores = []
+    pool = mp.Pool(5)
+    def CollectResults(result):
+        cv_scores.append(result)
 
     for train_index, test_index in kf.split(X['index']):
         X_train = {}
@@ -339,9 +419,30 @@ def CrossValidationTest(X, pos_pattern_vocab):
         for key in X:
             Y_test[key] = [X[key][i] for i in test_index]
 
-        nb_clf = clf.BuildClassifierNB(X_train, X_train['classification'], None, pos_pattern_vocab)
-        nb_predictions = nb_clf.predict(Y_test)
-        print("NB Accuracy: %0.2f" % (accuracy_score(Y_test['classification'], nb_predictions)))
+        if X_addon is not None:
+            for i in range(len(X_addon['index'])):
+                for key in X_train:
+                    X_train[key].append(X_addon[key][i])
+
+        pool.apply_async(DoCVSplitTest, args=(X_train, Y_test, pos_pattern_vocab), callback=CollectResults)
+
+    pool.close()
+    pool.join()
+
+    cv_scores = np.array(cv_scores)
+    print("Cross Validation Accuracy: %0.4f (+/- %0.2f)" % (cv_scores[:,0].mean(), cv_scores[:,0].std()))
+    print("Cross Validation Precision: %0.4f (+/- %0.2f)" % (cv_scores[:,1].mean(), cv_scores[:,1].std()))
+    print("Cross Validation Recall: %0.4f (+/- %0.2f)" % (cv_scores[:,2].mean(), cv_scores[:,2].std()))
+    print("Cross Validation F-score: %0.4f (+/- %0.2f)" % (cv_scores[:,3].mean(), cv_scores[:,3].std()))
+    return cv_scores
+
+def DoCVSplitTest(X_train, Y_test, vocab):
+    classifier = clf.BuildClassifierSVM(X_train, X_train['classification'], vocab, None, 'usl')
+    predictions = classifier.predict(Y_test)
+    accuracy = np.array([accuracy_score(Y_test['classification'], predictions)])
+    prfs = np.array(precision_recall_fscore_support(Y_test['classification'], predictions, average='weighted', warn_for=()))
+    result = np.append(accuracy, prfs)
+    return result
 
 def LoadDataSet(path):
     data_dict = {}
@@ -349,6 +450,7 @@ def LoadDataSet(path):
     data_dict['classification'] = []
     data_dict['tokenized_text'] = []
     data_dict['tokenized_text_2'] = []
+    data_dict['tagged_text'] = []
     data_dict['text'] = []
     data_dict['pos'] = []
     data_dict['wordcount'] = []
@@ -357,7 +459,11 @@ def LoadDataSet(path):
     data_dict['gpf'] = []
     data_dict['fa'] = []
 
-    df = pd.read_excel(path, usecols=range(0, 50))
+    data_dict['le_c'] = []
+    data_dict['words_misspelled'] = []
+    data_dict['ts'] = []
+
+    df = pd.read_excel(path, usecols=range(0, 60))
     for i in range(len(df['Classification'])):
         gpf = []
         fa = []
@@ -369,7 +475,8 @@ def LoadDataSet(path):
         #text = str(df['Text'][i])
         tokenized_text = str(df['TokenizedText'][i])
         tokenized_text_2 = str(df['TokenizedText2'][i])
-        text = str(df['TaggedPOS'][i])
+        tagged_text = str(df['TaggedPOS'])
+        text = str(df['Text'][i])
         pos = df['POS'][i]
         classification = df['Classification'][i]
         word_count = df['WordCount'][i]
@@ -409,10 +516,15 @@ def LoadDataSet(path):
         fa[21] = df['FA22'][i]
         fa[22] = df['FA23'][i]
 
+        le_c = df['LE_C'][i]
+        words_misspelled = df['WordsMispelled'][i] / word_count
+        ts = df['TS'][i]
+
         data_dict['index'].append(i)
         data_dict['classification'].append(classification)
         data_dict['tokenized_text'].append(tokenized_text)
         data_dict['tokenized_text_2'].append(tokenized_text_2)
+        data_dict['tagged_text'].append(tagged_text)
         data_dict['text'].append(text)
         data_dict['pos'].append(pos)
         data_dict['wordcount'].append(word_count)
@@ -420,6 +532,10 @@ def LoadDataSet(path):
         data_dict['fmeasure'].append(fmeasure)
         data_dict['gpf'].append(gpf)
         data_dict['fa'].append(fa)
+
+        data_dict['le_c'].append(le_c)
+        data_dict['words_misspelled'].append(words_misspelled)
+        data_dict['ts'].append(ts)
     return data_dict
 
 def ConvertToSVMLight(X, Y, path):

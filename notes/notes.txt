@@ -1,0 +1,18 @@
+Length/Count
+    - Actual Value
+
+F-Measure 
+    - Actual Value
+
+Stylistic Features (words)
+    - Boolean or TF
+
+Gender Preferential Features (GPF)
+    - Boolean or TF
+
+Factor Analysis and Word Classes
+    - Boolean or TF
+
+POS Sequence Pattern
+    - Boolean or TF
+

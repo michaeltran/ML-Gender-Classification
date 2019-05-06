@@ -1,25 +1,35 @@
 import nltk
 from flair.data import Sentence
 from flair.models import SequenceTagger
+import textstat
+from spellchecker import SpellChecker
 
 import argparse
 import xlsxwriter
 import pandas as pd
-import codecs
 import os
 import re
+import numpy as np
 from xml.dom import minidom
+import random
 from random import shuffle
+import multiprocessing as mp
 
 from MinePOSPats import MinePOSPats
-from MineWordPats import MineWordPats
-
-import numpy as np
+from Helper.NLTKPreprocessor import NLTKPreprocessor
 
 TAGGER = SequenceTagger.load('pos')
-
-from Helper.NLTKPreprocessor import NLTKPreprocessor
-nltk_preprocessor = NLTKPreprocessor(True)
+SPELL = SpellChecker()
+SPELL.word_frequency.load_words(["'s", "'m", "'re", "'ll" , "'ve", "'t", "'d"])
+SPELL.word_frequency.load_words(['hulu', 'google', 'smartphone', 'iphone', 'immersive', 'xbox', 'blog', 'obama', 'facebook', 'itunes', 'gmail', 'espn', 'youtube', 'adsense', 'pikachu', 'etsy', 
+                                 'wikipedia', 'starbucks', 'jetblue', 'webcam', 'traveler', 'retweet', 'website', 'favors', 'deadspin', 'huffington', 'wordpress', 'linkedin', 'website', 'mozilla', 
+                                 'firefox', 'linux', 'http', 'evanescence', 'dvd', 'krispy', 'kreme', 'donut', '3d', 'mp3', 'jpg', 'photobucket', 'suv', 'saudia', 'vevo', 'popsicle', 'voicemail',
+                                 'sophomore', 'hotmail', 'fastmail', 'morrowind', 'fanboy', 'fandom', 'resize', 'ie5', 'ie6', 'timeline', 'newbie', 'vigor', 'netflix', 'anime', 'html', 'xml', 'savior',
+                                 'walgreens', 'ebay', 'myspace', 'lasik', 'wii', 'uber', 'petco', 'sweatpants', 'jello', 'malware', 'wiki', 'ubuntu', 'savor', 'nerdy', 'flavors', 'jalapenos', 'guestbook',
+                                 'runescape', 'ragnarok', 'gamer', '2d', '3d', 'neverwinter', 'paintball', 'urllink', 'internship', 'warcraft', 'simcity', 'sxsw', 'paralyzed', 'telus', 'shrek', 'avatar',
+                                 'poptarts', 'bioshock', 'endeavor', 'walmart', 'multiplayer', 'advil', 'ffix', 'funimation', 'fullmetal'])
+SPELL.word_frequency.load_words(['dvds', 'blogs', 'blogging', 'blogger', 'bloggers', 'retweets', 'iphones', 'tweets', 'websites', 'resizes', 'resizing', 'geeks'])
+NLTK_PREPROCESSOR = NLTKPreprocessor(True)
 
 POS_DICTIONARY = {}
 
@@ -27,7 +37,7 @@ def SplitData():
     ## Get Command-line Arguments #################
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--data', default='data/blog-gender-dataset.xlsx', help='')
-    parser.add_argument('-m', '--mine', default=False, help ='')
+    parser.add_argument('-m', '--mine', default=True, help ='')
     opts = parser.parse_args()
     ###############################################
 
@@ -39,7 +49,6 @@ def SplitData():
 
     data_male_text = []
     data_female_text = []
-    data_left_over = []
 
     training_data_text = []
     training_data_classification = []
@@ -49,8 +58,11 @@ def SplitData():
     # Prepare and Sanitize data - -1 = Female, 1 = Male
     for i in range(len(df['Text'])):
         text = df['Text'][i]
+
         classification = df['Classification'][i]
         if text == text and classification == classification:
+            text = CleanText(text)
+
             classification = classification.strip().upper()
             if classification == 'M':
                 data_male_text.append(text)
@@ -77,16 +89,15 @@ def SplitData():
         blog_data.append(blog_female_data[i])
         blog_data_classification.append(-1)
 
-    #data_male_text = data_male_text + blog_male_data
-    #data_female_text = data_female_text + blog_female_data
-
-    shuffle(data_male_text)
-    shuffle(data_female_text)
+    ##data_male_text = data_male_text + blog_male_data
+    ##data_female_text = data_female_text + blog_female_data
 
     GetPOSTags(data_male_text)
+    WritePOSToExcel('data/pos.xlsx')
     GetPOSTags(data_female_text)
-
-    #WritePOSToExcel('data/pos.xlsx')
+    WritePOSToExcel('data/pos.xlsx')
+    GetPOSTags(blog_data)
+    WritePOSToExcel('data/pos.xlsx')
 
     # POS Pattern Mining
     if opts.mine == True:
@@ -107,10 +118,17 @@ def SplitData():
                 patterns.append(pattern)
             file.write('\n'.join(patterns))
 
+    shuffle(data_male_text)
+    shuffle(data_female_text)
+
+    #c = list(zip(blog_data, blog_data_classification))
+    #shuffle(c)
+    #blog_data, blog_data_classification = zip(*c)
+
     # Split out training dataset
     len_data = 0
     len_data = min(int(len(data_male_text)), int(len(data_female_text)))
-    len_training_data = int(len_data * (9/10) * 2)
+    len_training_data = int(len_data * (8/10) * 2)
     for i in range(len_training_data):
         if i % 2 == 1:
             # Male
@@ -145,14 +163,31 @@ def SplitData():
     #            patterns.append(pattern)
     #        file.write('\n'.join(patterns))
 
-    # Save Training Data
-    WriteToExcel('data/train_data.xlsx', training_data_text, training_data_classification)
-
-    # Save Testing Data
-    WriteToExcel('data/test_data.xlsx', testing_data_text, testing_data_classification)
+    print("Saving Unlabled Data")
 
     # Save "Unlabled" Data
     WriteToExcel('data/unlabeled_data.xlsx', blog_data, blog_data_classification)
+    #p1 = Process(target=WriteToExcel, args=('data/unlabeled_data.xlsx', blog_data, blog_data_classification))
+    #p1.start()
+
+    print("Saving Training Data")
+
+    # Save Training Data
+    WriteToExcel('data/train_data.xlsx', training_data_text, training_data_classification)
+    #p2 = Process(target=WriteToExcel, args=('data/train_data.xlsx', training_data_text, training_data_classification))
+    #p2.start()
+
+    print("Saving Test Data")
+
+    # Save Testing Data
+    WriteToExcel('data/test_data.xlsx', testing_data_text, testing_data_classification)
+    #p3 = Process(target=WriteToExcel, args=('data/test_data.xlsx', testing_data_text, testing_data_classification))
+    #p3.start()
+
+    #p1.join()
+    #p2.join()
+    #p3.join()
+
     ###############################################
     print("Completed")
 
@@ -203,25 +238,35 @@ def WriteToExcel(path, data_text, data_classification):
         worksheet.write(row, col, 'FA21'); col += 1;
         worksheet.write(row, col, 'FA22'); col += 1;
         worksheet.write(row, col, 'FA23'); col += 1;
+        worksheet.write(row, col, 'LE_C'); col += 1;
+        worksheet.write(row, col, 'TS'); col += 1;
+        worksheet.write(row, col, 'WordsMispelled'); col += 1;
         row += 1;
         for i in range(len(data_text)):
             col = 0;
             text = data_text[i];
-            tokenized_text = GetTokenizedText(text)
-            tokenized_text_2 = GetTokenizedText2(text)
-            pos = GetPOS(text);
-            tagged_pos = GetTaggedPOS(text);
+
+            tokenized_text = GetTokenizedText(text) # Lemmatized and Stopword Removed
+            tokenized_text_2 = GetTokenizedText2(text) # Regular Tokenization
+
+            pos = GetPOS(text); # POS
+            tagged_pos = GetTaggedPOS(text); # WORD_POS
+            fmeasure = GetFMeasure(text);
+
             gpf = GetGenderPreferentialFeatures(text);
             fa = GetFactorAnalysis(text);
+            le_c, ts = GetTextStatInfo(text)
+            words_misspelled = GetNumberOfIncorrectSpelling(text)
+
             worksheet.write(row, col, data_classification[i]); col += 1;
             worksheet.write(row, col, text); col += 1;
             worksheet.write(row, col, tokenized_text); col += 1;
             worksheet.write(row, col, tokenized_text_2); col += 1;
             worksheet.write(row, col, pos); col += 1;
             worksheet.write(row, col, tagged_pos); col += 1;
-            worksheet.write(row, col, len(nltk.word_tokenize(text))); col += 1;
+            worksheet.write(row, col, len(TextTokenizer(text))); col += 1;
             worksheet.write(row, col, len(text)); col += 1;
-            worksheet.write(row, col, GetFMeasure(text)); col += 1;
+            worksheet.write(row, col, fmeasure); col += 1;
             worksheet.write(row, col, gpf[0]); col += 1;
             worksheet.write(row, col, gpf[1]); col += 1;
             worksheet.write(row, col, gpf[2]); col += 1;
@@ -255,12 +300,15 @@ def WriteToExcel(path, data_text, data_classification):
             worksheet.write(row, col, fa[20]); col += 1;
             worksheet.write(row, col, fa[21]); col += 1;
             worksheet.write(row, col, fa[22]); col += 1;
+            worksheet.write(row, col, le_c); col += 1;
+            worksheet.write(row, col, ts); col += 1;
+            worksheet.write(row, col, words_misspelled); col += 1;
+
             row += 1;
     return
 
 def GetTokenizedText(text):
-    #tokens = nltk.word_tokenize(text)
-    tokens = nltk_preprocessor.TokenizeText(text)
+    tokens = NLTK_PREPROCESSOR.TokenizeText(text)
     return ' '.join(tokens)
 
 def GetTokenizedText2(text):
@@ -275,7 +323,8 @@ def GetTaggedPOS(text):
     tagged_text = []
 
     pos_text = GetPOSTag(text)
-    sentence = Sentence(text, use_tokenizer=True)
+    preprocessed_text = PreprocessForPOS(text)
+    sentence = Sentence(preprocessed_text, use_tokenizer=True)
 
     for i in range(len(pos_text)):
         tagged_text.append(sentence[i].text + '_' + pos_text[i])
@@ -304,7 +353,7 @@ def GetFMeasure(text):
             freq['adj'] += 1
         elif pos in ['IN']:
             freq['prep'] += 1
-        elif pos in ['DET']:
+        elif pos in ['DET', 'DT', 'PDT', 'WDT']:
             freq['art'] += 1
         elif pos in ['PRP', 'PRP$', 'WP', 'WP$']:
             freq['pron'] += 1
@@ -329,7 +378,7 @@ def GetGenderPreferentialFeatures(text):
     f = []
     for i in range(10):
         f.append(0)
-    for word in nltk.word_tokenize(text):
+    for word in TextTokenizer(text):
         word = word.lower()
         if word.endswith(('able')):
             f[0] += 1
@@ -428,7 +477,7 @@ def GetFactorAnalysis(text):
 
     for i in range(len(words_in_factor)):
         f.append(0)
-    for word in nltk.word_tokenize(text):
+    for word in TextTokenizer(text):
         word = word.lower()
         for i in range(len(words_in_factor)):
             if word in words_in_factor[i]:
@@ -454,6 +503,7 @@ def GetBlogAuthorshipCorpusData(path):
             for post in posts:
                 text = post.firstChild.data
                 text = text.replace('\n', '').replace('\t', '').strip()
+                text = CleanText(text)
                 if len(text) < 100 or len(text) > 32700:
                     continue
                 if text.startswith("="):
@@ -482,13 +532,28 @@ def GetBlogAuthorshipCorpusData(path):
 
     return male_data, female_data
 
+def PreprocessForPOS(text):
+    new_text = text
+    new_text = new_text.replace(',', ', ')
+    new_text = new_text.replace('.', '. ')
+    return new_text
+
 def GetPOSTag(d_words):
     if d_words in POS_DICTIONARY:
         return POS_DICTIONARY[d_words]
     else:
         d = []
 
-        sentence = Sentence(d_words, use_tokenizer=True)
+        preprocessed_text = PreprocessForPOS(d_words)
+        sentence = Sentence(preprocessed_text, use_tokenizer=True)
+
+        #for token in sentence:
+        #    text = token.text
+        #    #print(SPELL.candidates(text))
+        #    correction = SPELL.correction(text)
+        #    if text != correction:
+        #        token.text = correction
+
         TAGGER.predict(sentence)
         for token in sentence:
             pos = token.get_tag('pos').value
@@ -499,9 +564,56 @@ def GetPOSTag(d_words):
         return d
 
 def GetPOSTags(D_words):
+    i = 1
     for d_words in D_words:
         GetPOSTag(d_words)
+        if i % 2000 == 0:
+            print('Saving Checkpoint')
+            WritePOSToExcel('data/pos.xlsx')
     return
+
+#def GetPOSTagParallel(d_words):
+#    print('sweg')
+#    #d = []
+
+#    #print(1)
+#    #preprocessed_text = PreprocessForPOS(d_words)
+#    #sentence = Sentence(preprocessed_text, use_tokenizer=True)
+#    #print(2)
+#    #for token in sentence:
+#    #    print(3)
+#    #    text = token.text
+#    #    #print(SPELL.candidates(text))
+#    #    correction = SPELL.correction(text)
+#    #    if text != correction:
+#    #        token.text = correction
+#    #    print(4)
+#    #print(5)
+#    #TAGGER.predict(sentence)
+#    #for token in sentence:
+#    #    pos = token.get_tag('pos').value
+#    #    d.append(pos)
+
+#    #return (d_words, d)
+#    return (1, 2)
+
+#def GetPOSTagsParallel(D_words):
+#    pool = mp.Pool(2)
+#    def CollectResults(result):
+#        print('derp')
+#        POS_DICTIONARY[result[0]] = result[1]
+#        print(len(POS_DICTIONARY))
+
+#    for d_words in D_words:
+#        if d_words in POS_DICTIONARY:
+#            continue
+#        else:
+#            pool.apply_async(GetPOSTagParallel, args=(d_words), callback=CollectResults)
+
+#    pool.close()
+#    pool.join()
+
+#    return
 
 def WritePOSToExcel(path):
     with xlsxwriter.Workbook(path, {'strings_to_urls': False}) as workbook:
@@ -526,6 +638,85 @@ def LoadPOSExcel(path):
             pos = str(df['POS'][i])
             POS_DICTIONARY[text] = [str(x) for x in pos.split(' ')]
     return
+
+def GetTextStatInfo(text):
+    le_c = textstat.lexicon_count(text, removepunct=True)
+    ts = textstat.text_standard(text, float_output=True)
+
+    return le_c, ts
+
+def TextTokenizer(text):
+    new_text = text
+    new_text = new_text.replace('/', ' ')
+    new_text = new_text.replace('.', ' ')
+    new_text = new_text.replace('-', ' ')
+    new_text = new_text.replace('_', ' ')
+    new_text = new_text.replace('%', ' ')
+    new_text = new_text.replace(',', '')
+    new_text = new_text.replace('(', '')
+    new_text = new_text.replace(')', '')
+    new_text = new_text.replace('!', '')
+    new_text = new_text.replace(';', '')
+    new_text = new_text.replace('$', '')
+    new_text = new_text.replace('"', '')
+    new_text = new_text.replace('?', '')
+    new_text = new_text.replace(':', '')
+    new_text = new_text.replace('~', '')
+    new_text = new_text.replace('*', '')
+    new_text = new_text.replace(" '", '')
+    new_text = new_text.replace("' ", '')
+
+    #tokens = nltk.WhitespaceTokenizer().tokenize(new_text)
+    tokens = nltk.word_tokenize(new_text)
+
+    #for i in range(len(tokens)):
+    #    tokens[i] = tokens[i].replace('.', '')
+    #    tokens[i] = tokens[i].replace(',', '')
+    #    tokens[i] = tokens[i].replace(')', '')
+    #    tokens[i] = tokens[i].replace('(', '')
+    #    tokens[i] = tokens[i].replace('!', '')
+    #    tokens[i] = tokens[i].replace(';', '')
+    #    tokens[i] = tokens[i].replace('$', '')
+
+    return tokens
+
+def CleanText(text):
+    clean_text = text
+    clean_text = clean_text.replace('&nbsp', ' ')
+    clean_text = clean_text.replace('…', '...')
+    clean_text = clean_text.replace('‘', "'")
+    clean_text = clean_text.replace('’', "'")
+    clean_text = clean_text.replace('—', '-')
+    clean_text = clean_text.replace('–', '-')
+    clean_text = clean_text.replace('“', '"')
+    clean_text = clean_text.replace('”', '"')
+    clean_text = clean_text.replace('£', '$')
+    clean_text = clean_text.replace('`', "'")
+    clean_text = clean_text.replace('`', "'")
+    clean_text = clean_text.replace('\x92', '')
+    clean_text = clean_text.replace('\x93', '')
+    clean_text = clean_text.replace('\x94', '')
+
+    clean_text = re.sub(r"http\S+", "", clean_text)
+
+    clean_text = ' '.join(clean_text.split())
+
+    return clean_text
+
+def GetNumberOfIncorrectSpelling(text):
+    tokens = TextTokenizer(text)
+
+    misspelled = SPELL.unknown(tokens)
+
+    #for i in range(len(misspelled)):
+    #    misspelled[i] = ''.join(e for e in misspelled[i] if e.isalnum())
+
+    misspelled.discard('')
+
+    random_val = random.randint(0, 100)
+    if random_val > 99:
+        print(misspelled)
+    return len(misspelled)
 
 if __name__ == '__main__':
     SplitData()

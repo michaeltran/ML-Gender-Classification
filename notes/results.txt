@@ -1,0 +1,31 @@
+### Naive Bayes ###
+
+NB TF Accuracy: 0.69
+
+NB DISCRETE Accuracy: 0.70
+
+NB BOOL Accuracy: 0.72
+
+### SVM ###
+
+SVM TF Accuracy: 0.73
+
+SVM DISCRETE Accuracy: 0.68
+
+SVM SVC Accuracy: 0.74
+
+### SVM - Regression ###
+
+SVM-R LINEAR DEFAULT Accuracy: 0.71
+
+SVM-R BOOL Accuracy: 0.63
+
+SVM-R TF Accuracy: 0.61
+
+FINAL Accuracy: 0.76
+
+
+Time Run = 1012.169149s
+
+The thread 0x1 has exited with code 0 (0x0).
+The program 'python.exe' has exited with code 0 (0x0).

@@ -267,4 +267,4 @@ GenderClassification/GenderClassification/data/blogs
 GenderClassification/GenderClassification/data/TrainSVMLight.txt
 GenderClassification/GenderClassification/data/TestSVMLight.txt
 GenderClassification/GenderClassification/data/old/*
-GenderClassification/GenderClassification/data/old2/*
+SVM Light/*
