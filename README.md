@@ -44,7 +44,7 @@ Dataset 1 is already preloaded into this repository. Dataset 2 will need to be d
 From the `GenderClassification/GenderClassification` directory, run the following command:
 
 ```Rich Text Format
-DataSplitter.py
+python DataSplitter.py
 ```
 
 This script will preprocess all of the data from Dataset 1 and Dataset 2, and will save the data into `test_data.xlsx`, `train_data.xlsx`, and `unlabeled_data.xlsx`. It will also perform POS pattern mining and save the results into `POSPatterns.txt`.
@@ -70,7 +70,7 @@ A brief overview on what is preprocessed:
 From the `GenderClassification/GenderClassification` directory, run the following command:
 
 ```Rich Text Format
-GenderClassification.py
+python GenderClassification.py
 ```
 
 This script will run all of the preprocessed data through the classifiers. A brief overview on what is done:
