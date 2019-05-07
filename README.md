@@ -56,7 +56,7 @@ A brief overview on what is preprocessed:
 * Tokenized Text (Lemmatization and Stopword Removal)
 * Tokenized Text 2 (NLTK Tokenization)
 * POS
-* Tagged POS
+* Tagged POS (Word_POS)
 * Word Count
 * (Text) Length
 * F-Measure

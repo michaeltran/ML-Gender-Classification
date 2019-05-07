@@ -126,11 +126,10 @@ Use tf.cast instead.
 Train on 9486 samples, validate on 610 samples
 Epoch 1/40
 
-Restoring model weights from the end of the best epoch
 Epoch 00008: early stopping
 Training Accuracy: 0.9881
 Testing Accuracy:  0.7639
-## CV Accuract on SSS dataset
+## CV Accuracy on SSS dataset
 The thread 0x5 has exited with code 0 (0x0).
 The thread 0x7 has exited with code 0 (0x0).
 The thread 0x6 has exited with code 0 (0x0).
