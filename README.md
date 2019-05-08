@@ -2,7 +2,7 @@
 
 Blog Gender Classification using Machine Learning.
 
-For technical details, please refer to our [[paper]](https://github.com/michaeltran/ML-Gender-Classification).
+For technical details, please refer to our [[paper]](https://github.com/michaeltran/ML-Gender-Classification/blob/master/docs/report.pdf).
 
 ## Requirements
 
