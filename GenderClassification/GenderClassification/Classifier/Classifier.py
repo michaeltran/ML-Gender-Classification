@@ -1284,7 +1284,7 @@ class Classifier(object):
         model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
         model.summary()
 
-        es = EarlyStopping(monitor='val_acc', mode='auto', verbose=1, restore_best_weights=True, patience=7)
+        es = EarlyStopping(monitor='val_acc', mode='auto', verbose=0, restore_best_weights=True, patience=7)
 
         history = model.fit(X_train, Y_train, epochs=40, verbose=1, validation_data=(X_test, Y_test), batch_size=10, callbacks=[es])
 

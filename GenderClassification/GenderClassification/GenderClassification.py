@@ -60,6 +60,7 @@ def main():
         for key in training_data_dict:
             training_data_dict[key].append(testing_data_dict[key][i])
     testing_data_dict = {}
+    CrossValidationTest(training_data_dict, None, pos_pattern_vocab)
     print('## Adding some more labled data into training set...')
     # Add Unlabled Data
     for i in range(3000):
@@ -68,13 +69,7 @@ def main():
             del unlabeled_data_dict[key][0]
 
 
-    ## Neural Networks ################################
-
-    #CrossValidationTest(training_data_dict, pos_pattern_vocab)
-
-    #for i in range(len(unlabeled_data_dict['index'])):
-    #    for key in training_data_dict:
-    #        training_data_dict[key].append(unlabeled_data_dict[key][i])
+    ## Neural Networks and SSS Learning ###########
 
     #svm_clf = clf.BuildClassifierSGD(training_data_dict, pos_pattern_vocab, 'sgd')
     #svm_predictions = svm_clf.predict(testing_data_dict)
@@ -107,6 +102,9 @@ def main():
     nb_predictions = nb_clf.predict(testing_data_dict)
     print("MLP Accuracy: %0.3f" % (accuracy_score(testing_data_dict['classification'], nb_predictions)))
 
+    print('## Keras Accuracy on new training/test set...')
+    history, predictions = clf.BuildClassifierKeras(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
+
     print('## Supervised Semi-Supervised Learning...')
     training_data_dict = clf.SemiSupervisedLearning(training_data_dict, testing_data_dict, unlabeled_data_dict, pos_pattern_vocab)
 
@@ -123,6 +121,7 @@ def main():
 
     print('## Keras Accuracy on SSS dataset')
     history, predictions = clf.BuildClassifierKeras(training_data_dict, testing_data_dict, pos_pattern_vocab, 'tf')
+    predictors['KERAS'] = nb_predictions
 
     print('## CV Accuracy on SSS dataset')
     CrossValidationTest(training_data_dict, None, pos_pattern_vocab)
